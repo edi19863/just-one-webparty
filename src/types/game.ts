@@ -32,8 +32,8 @@ export interface Game {
   players: Player[];
   currentRound: Round | null;
   rounds: Round[];
-  createdAt: number;
-  updatedAt: number;
+  createdAt: string; // ISO string format for timestamp without timezone
+  updatedAt: string; // ISO string format for timestamp without timezone
 }
 
 export enum GameStatus {
