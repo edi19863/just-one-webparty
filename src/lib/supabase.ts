@@ -1,20 +1,16 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Game } from '@/types/game';
 
 const supabaseUrl = 'https://tqvnpmhfavjiqxplutwk.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxdm5wbWhmYXZqaXF4cGx1dHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM0NjAzOTAsImV4cCI6MjA1OTAzNjM5MH0.7cLrQfVWwIw_p0V4xfZDG7MZCQpDyov-Qz_5cNCmD_Y';
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Enable row-level security with custom headers
-export const enableRLS = () => {
-  // Add custom headers to bypass RLS for development
-  supabase.headers['x-app-role'] = 'app_user';
-};
-
-// Call this function right away to set headers
-enableRLS();
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  global: {
+    headers: {
+      'x-app-role': 'app_user'
+    }
+  }
+});
 
 // Game functions
 export const getGameByCode = async (code: string) => {
