@@ -39,12 +39,11 @@ export const getGameById = async (id: string) => {
 };
 
 export const createGameInDb = async (game: Game) => {
-  // Use the current timestamp for createdAt and updatedAt
-  // Supabase will automatically convert this to the proper timestamp format
+  // Use the current timestamp for created_at and updated_at
   const gameToCreate = {
     ...game,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    created_at: new Date().toISOString(), // Changed from createdAt to created_at
+    updated_at: new Date().toISOString()  // Changed from updatedAt to updated_at
   };
 
   const { data, error } = await supabase
@@ -62,10 +61,10 @@ export const createGameInDb = async (game: Game) => {
 };
 
 export const updateGameInDb = async (game: Game) => {
-  // Always update the updatedAt timestamp
+  // Always update the updated_at timestamp
   const gameToUpdate = {
     ...game,
-    updatedAt: new Date().toISOString()
+    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
   };
 
   const { data, error } = await supabase

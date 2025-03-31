@@ -29,13 +29,13 @@ export const createNewGame = (hostId: string, hostNickname: string): Game => {
   return {
     id: generatePlayerId(),
     code: code,
-    hostId: hostId,
+    host_id: hostId, // Changed from hostId to host_id
     status: GameStatus.LOBBY,
     players: [host],
-    currentRound: null,
+    current_round: null, // Changed from currentRound to current_round
     rounds: [],
-    createdAt: Date.now(),
-    updatedAt: Date.now()
+    created_at: new Date().toISOString(), // Changed from createdAt to created_at
+    updated_at: new Date().toISOString()  // Changed from updatedAt to updated_at
   };
 };
 
@@ -52,7 +52,7 @@ export const addPlayerToGame = (game: Game, nickname: string): { game: Game, pla
   const updatedGame = {
     ...game,
     players: [...game.players, player],
-    updatedAt: Date.now()
+    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
   };
 
   return { game: updatedGame, playerId };
@@ -109,15 +109,15 @@ export const startNewRound = (game: Game): Game => {
     ...game,
     players: updatedPlayers,
     status: GameStatus.SUBMITTING_CLUES,
-    currentRound: newRound,
+    current_round: newRound, // Changed from currentRound to current_round
     rounds: [...game.rounds, newRound],
-    updatedAt: Date.now()
+    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
   };
 };
 
 // Add a clue from a player
 export const addClue = (game: Game, playerId: string, word: string): Game => {
-  if (!game.currentRound) return game;
+  if (!game.current_round) return game; // Changed from currentRound to current_round
   
   const player = game.players.find(p => p.id === playerId);
   if (!player) return game;
@@ -130,8 +130,8 @@ export const addClue = (game: Game, playerId: string, word: string): Game => {
   };
   
   const updatedRound = {
-    ...game.currentRound,
-    clues: [...game.currentRound.clues, clue]
+    ...game.current_round, // Changed from currentRound to current_round
+    clues: [...game.current_round.clues, clue] // Changed from currentRound to current_round
   };
   
   // Check if all non-guessers have submitted clues
@@ -148,20 +148,20 @@ export const addClue = (game: Game, playerId: string, word: string): Game => {
   return {
     ...game,
     status: updatedStatus,
-    currentRound: updatedRound,
+    current_round: updatedRound, // Changed from currentRound to current_round
     rounds: updatedRounds,
-    updatedAt: Date.now()
+    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
   };
 };
 
 // Filter duplicate clues
 export const filterClues = (game: Game): Game => {
-  if (!game.currentRound) return game;
+  if (!game.current_round) return game; // Changed from currentRound to current_round
   
   // Group clues by lowercase word
   const clueGroups = new Map<string, Clue[]>();
   
-  game.currentRound.clues.forEach(clue => {
+  game.current_round.clues.forEach(clue => { // Changed from currentRound to current_round
     const lowerWord = clue.word.toLowerCase();
     if (!clueGroups.has(lowerWord)) {
       clueGroups.set(lowerWord, []);
@@ -170,16 +170,16 @@ export const filterClues = (game: Game): Game => {
   });
   
   // Mark duplicates as filtered
-  const filteredClues = game.currentRound.clues.map(clue => {
+  const filteredClues = game.current_round.clues.map(clue => { // Changed from currentRound to current_round
     const group = clueGroups.get(clue.word.toLowerCase()) || [];
     return {
       ...clue,
-      filtered: group.length > 1 || clue.word.toLowerCase() === game.currentRound!.secretWord.toLowerCase()
+      filtered: group.length > 1 || clue.word.toLowerCase() === game.current_round!.secretWord.toLowerCase() // Changed from currentRound to current_round
     };
   });
   
   const updatedRound = {
-    ...game.currentRound,
+    ...game.current_round, // Changed from currentRound to current_round
     clues: filteredClues
   };
   
@@ -191,23 +191,23 @@ export const filterClues = (game: Game): Game => {
   return {
     ...game,
     status: GameStatus.GUESSING,
-    currentRound: updatedRound,
+    current_round: updatedRound, // Changed from currentRound to current_round
     rounds: updatedRounds,
-    updatedAt: Date.now()
+    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
   };
 };
 
 // Submit a guess
 export const submitGuess = (game: Game, guess: string): Game => {
-  if (!game.currentRound) return game;
+  if (!game.current_round) return game; // Changed from currentRound to current_round
   
   const normalizedGuess = guess.toLowerCase().trim();
-  const normalizedSecretWord = game.currentRound.secretWord.toLowerCase();
+  const normalizedSecretWord = game.current_round.secretWord.toLowerCase(); // Changed from currentRound to current_round
   
   const isCorrect = normalizedGuess === normalizedSecretWord;
   
   const updatedRound = {
-    ...game.currentRound,
+    ...game.current_round, // Changed from currentRound to current_round
     guess,
     correct: isCorrect,
     completed: true
@@ -221,9 +221,9 @@ export const submitGuess = (game: Game, guess: string): Game => {
   return {
     ...game,
     status: GameStatus.ROUND_RESULT,
-    currentRound: updatedRound,
+    current_round: updatedRound, // Changed from currentRound to current_round
     rounds: updatedRounds,
-    updatedAt: Date.now()
+    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
   };
 };
 
@@ -232,20 +232,22 @@ export const removePlayerFromGame = (game: Game, playerId: string): Game => {
   const updatedPlayers = game.players.filter(p => p.id !== playerId);
   
   // If the host is leaving, assign a new host
-  let updatedHostId = game.hostId;
-  if (playerId === game.hostId && updatedPlayers.length > 0) {
-    const newHost = updatedPlayers[0];
-    updatedHostId = newHost.id;
-    updatedPlayers[0] = {
-      ...newHost,
-      isHost: true
-    };
+  let updatedHostId = game.host_id; // Changed from hostId to host_id
+  if (playerId === game.host_id) { // Changed from hostId to host_id
+    if (updatedPlayers.length > 0) {
+      const newHost = updatedPlayers[0];
+      updatedHostId = newHost.id;
+      updatedPlayers[0] = {
+        ...newHost,
+        isHost: true
+      };
+    }
   }
   
   return {
     ...game,
-    hostId: updatedHostId,
+    host_id: updatedHostId, // Changed from hostId to host_id
     players: updatedPlayers,
-    updatedAt: Date.now()
+    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
   };
 };

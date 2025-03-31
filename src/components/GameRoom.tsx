@@ -18,15 +18,15 @@ interface GameRoomProps {
 
 const GameRoom = ({ game, currentPlayerId, onSubmitClue, onSubmitGuess, onStartRound }: GameRoomProps) => {
   const currentPlayer = game.players.find(p => p.id === currentPlayerId);
-  const isHost = currentPlayerId === game.hostId;
+  const isHost = currentPlayerId === game.host_id; // Changed from hostId to host_id
   const isGuesser = currentPlayer?.isGuesser || false;
   
   // Handle case where we have a current round but need to filter clues
   useEffect(() => {
     const checkAllCluesSubmitted = () => {
-      if (game.status === GameStatus.SUBMITTING_CLUES && game.currentRound) {
+      if (game.status === GameStatus.SUBMITTING_CLUES && game.current_round) { // Changed from currentRound to current_round
         const nonGuessers = game.players.filter(p => !p.isGuesser);
-        const allCluesSubmitted = nonGuessers.length === game.currentRound.clues.length;
+        const allCluesSubmitted = nonGuessers.length === game.current_round.clues.length; // Changed from currentRound to current_round
         
         if (allCluesSubmitted && isHost) {
           // Small delay to allow animation
@@ -39,7 +39,7 @@ const GameRoom = ({ game, currentPlayerId, onSubmitClue, onSubmitGuess, onStartR
     };
     
     checkAllCluesSubmitted();
-  }, [game.status, game.currentRound, game.players, isHost]);
+  }, [game.status, game.current_round, game.players, isHost]); // Changed from currentRound to current_round
   
   const renderGameContent = () => {
     switch (game.status) {
@@ -56,18 +56,18 @@ const GameRoom = ({ game, currentPlayerId, onSubmitClue, onSubmitGuess, onStartR
         );
         
       case GameStatus.SUBMITTING_CLUES:
-        if (!game.currentRound) return null;
+        if (!game.current_round) return null; // Changed from currentRound to current_round
         return (
           <div className="max-w-md mx-auto">
             <WordDisplay 
-              word={game.currentRound.secretWord} 
+              word={game.current_round.secretWord} // Changed from currentRound to current_round
               isGuesser={isGuesser} 
             />
             
             {!isGuesser && (
               <ClueInput 
                 onSubmitClue={onSubmitClue} 
-                secretWord={game.currentRound.secretWord} 
+                secretWord={game.current_round.secretWord} // Changed from currentRound to current_round
               />
             )}
             
@@ -93,24 +93,24 @@ const GameRoom = ({ game, currentPlayerId, onSubmitClue, onSubmitGuess, onStartR
         );
         
       case GameStatus.GUESSING:
-        if (!game.currentRound) return null;
+        if (!game.current_round) return null; // Changed from currentRound to current_round
         return (
           <div className="max-w-md mx-auto">
             <WordDisplay 
-              word={game.currentRound.secretWord} 
+              word={game.current_round.secretWord} // Changed from currentRound to current_round
               isGuesser={isGuesser} 
             />
             
             {isGuesser ? (
               <GuessInput 
                 onSubmitGuess={onSubmitGuess} 
-                clues={game.currentRound.clues} 
+                clues={game.current_round.clues} // Changed from currentRound to current_round
               />
             ) : (
               <div className="bg-white rounded-lg p-6 shadow-md text-center">
                 <h3 className="text-xl font-medium mb-2">Waiting for guess</h3>
                 <p className="text-gray-600">
-                  {game.currentRound.guesserName} is thinking of the answer using your clues...
+                  {game.current_round.guesserName} is thinking of the answer using your clues... // Changed from currentRound to current_round
                 </p>
               </div>
             )}
@@ -118,10 +118,10 @@ const GameRoom = ({ game, currentPlayerId, onSubmitClue, onSubmitGuess, onStartR
         );
         
       case GameStatus.ROUND_RESULT:
-        if (!game.currentRound) return null;
+        if (!game.current_round) return null; // Changed from currentRound to current_round
         return (
           <RoundResults 
-            round={game.currentRound} 
+            round={game.current_round} // Changed from currentRound to current_round
             onStartNextRound={onStartRound}
             isHost={isHost}
           />

@@ -198,9 +198,9 @@ export const useGameState = (options?: UseGameStateOptions) => {
       
       toast({
         title: 'Guess Submitted',
-        description: savedGame.currentRound?.correct 
+        description: savedGame.current_round?.correct // Changed from currentRound to current_round
           ? 'Correct! Well done!'
-          : `Not quite. The word was "${savedGame.currentRound?.secretWord}"`,
+          : `Not quite. The word was "${savedGame.current_round?.secretWord}"`, // Changed from currentRound to current_round
       });
     } else {
       toast({
@@ -232,7 +232,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
     if (gameState?.id) {
       const subscription = subscribeToGame(gameState.id, (updatedGame) => {
         // Only update if the game has changed
-        if (updatedGame.updatedAt !== gameState.updatedAt) {
+        if (updatedGame.updated_at !== gameState.updated_at) { // Changed from updatedAt to updated_at
           setGameState(updatedGame);
         }
       });
@@ -241,7 +241,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
         subscription.unsubscribe();
       };
     }
-  }, [gameState?.id, gameState?.updatedAt]);
+  }, [gameState?.id, gameState?.updated_at]); // Changed from updatedAt to updated_at
 
   // Load initial game state if gameId is provided
   useEffect(() => {

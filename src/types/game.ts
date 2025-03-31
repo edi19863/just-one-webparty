@@ -27,13 +27,13 @@ export interface Round {
 export interface Game {
   id: string;
   code: string;
-  hostId: string;
+  host_id: string;  // Changed from hostId to host_id to match Supabase column
   status: GameStatus;
   players: Player[];
-  currentRound: Round | null;
+  current_round: Round | null;  // Changed from currentRound to current_round
   rounds: Round[];
-  createdAt: string; // ISO string format for timestamp without timezone
-  updatedAt: string; // ISO string format for timestamp without timezone
+  created_at: string; // ISO string format for timestamp without timezone
+  updated_at: string; // ISO string format for timestamp without timezone
 }
 
 export enum GameStatus {

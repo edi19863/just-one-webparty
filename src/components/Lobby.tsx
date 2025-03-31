@@ -15,7 +15,7 @@ interface LobbyProps {
 const Lobby = ({ game, currentPlayerId, onStartGame }: LobbyProps) => {
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
-  const isHost = currentPlayerId === game.hostId;
+  const isHost = currentPlayerId === game.host_id; // Changed from hostId to host_id
   
   const copyGameCode = () => {
     navigator.clipboard.writeText(game.code);
