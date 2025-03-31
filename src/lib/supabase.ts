@@ -7,8 +7,20 @@ const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYm
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+// Create a session for anonymous access if needed
+const ensureSession = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    // Create anonymous session
+    await supabase.auth.signInAnonymously();
+  }
+};
+
 // Game functions
 export const getGameByCode = async (code: string) => {
+  await ensureSession();
+  
   const { data, error } = await supabase
     .from('games')
     .select('*')
@@ -24,6 +36,8 @@ export const getGameByCode = async (code: string) => {
 };
 
 export const getGameById = async (id: string) => {
+  await ensureSession();
+  
   const { data, error } = await supabase
     .from('games')
     .select('*')
@@ -39,11 +53,13 @@ export const getGameById = async (id: string) => {
 };
 
 export const createGameInDb = async (game: Game) => {
+  await ensureSession();
+  
   // Use the current timestamp for created_at and updated_at
   const gameToCreate = {
     ...game,
-    created_at: new Date().toISOString(), // Changed from createdAt to created_at
-    updated_at: new Date().toISOString()  // Changed from updatedAt to updated_at
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   };
 
   const { data, error } = await supabase
@@ -61,10 +77,12 @@ export const createGameInDb = async (game: Game) => {
 };
 
 export const updateGameInDb = async (game: Game) => {
+  await ensureSession();
+  
   // Always update the updated_at timestamp
   const gameToUpdate = {
     ...game,
-    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
+    updated_at: new Date().toISOString()
   };
 
   const { data, error } = await supabase
