@@ -232,7 +232,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
     if (gameState?.id) {
       const subscription = subscribeToGame(gameState.id, (updatedGame) => {
         // Only update if the game has changed
-        if (updatedGame.updated_at !== gameState.updated_at) { // Changed from updatedAt to updated_at
+        if (updatedGame.updated_at !== gameState.updated_at) {
           setGameState(updatedGame);
         }
       });
@@ -241,7 +241,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
         subscription.unsubscribe();
       };
     }
-  }, [gameState?.id, gameState?.updated_at]); // Changed from updatedAt to updated_at
+  }, [gameState?.id, gameState?.updated_at]);
 
   // Load initial game state if gameId is provided
   useEffect(() => {
