@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Game } from '@/types/game';
 
@@ -38,9 +39,16 @@ export const getGameById = async (id: string) => {
 };
 
 export const createGameInDb = async (game: Game) => {
+  // Ensure createdAt and updatedAt are set as numbers
+  const gameToCreate = {
+    ...game,
+    createdAt: Date.now(),
+    updatedAt: Date.now()
+  };
+
   const { data, error } = await supabase
     .from('games')
-    .insert(game)
+    .insert(gameToCreate)
     .select()
     .single();
   
@@ -53,9 +61,15 @@ export const createGameInDb = async (game: Game) => {
 };
 
 export const updateGameInDb = async (game: Game) => {
+  // Always update the updatedAt timestamp
+  const gameToUpdate = {
+    ...game,
+    updatedAt: Date.now()
+  };
+
   const { data, error } = await supabase
     .from('games')
-    .update(game)
+    .update(gameToUpdate)
     .eq('id', game.id)
     .select()
     .single();
