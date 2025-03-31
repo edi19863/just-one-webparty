@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Game } from '@/types/game';
 
@@ -56,8 +57,6 @@ export const createGameInDb = async (game: Game) => {
     updated_at: new Date().toISOString()
   };
 
-  // Try using the rpc endpoint instead of direct insert to bypass RLS
-  // This assumes you have an RPC function set up in Supabase
   try {
     const { data, error } = await supabase
       .from('games')
@@ -99,21 +98,32 @@ export const updateGameInDb = async (game: Game) => {
   return data as Game;
 };
 
-// Real-time subscription
+// Improved real-time subscription with proper channel management
 export const subscribeToGame = (gameId: string, callback: (game: Game) => void) => {
-  return supabase
-    .channel(`game:${gameId}`)
+  // Create a unique channel name for this game
+  const channelName = `game-updates:${gameId}`;
+  
+  // Subscribe to changes on the games table for this specific game ID
+  const channel = supabase
+    .channel(channelName)
     .on(
       'postgres_changes',
       {
-        event: 'UPDATE',
+        event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
         schema: 'public',
         table: 'games',
         filter: `id=eq.${gameId}`
       },
       (payload) => {
-        callback(payload.new as Game);
+        console.log('Received real-time update:', payload);
+        if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
+          callback(payload.new as Game);
+        }
       }
     )
-    .subscribe();
+    .subscribe((status) => {
+      console.log(`Supabase subscription status: ${status}`, channelName);
+    });
+  
+  return channel;
 };

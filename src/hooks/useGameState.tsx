@@ -1,8 +1,9 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Game, GameStatus } from '@/types/game';
 import * as gameUtils from '@/utils/gameUtils';
 import { useToast } from '@/components/ui/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { 
   supabase, 
   getGameById, 
@@ -11,6 +12,7 @@ import {
   updateGameInDb,
   subscribeToGame 
 } from '@/lib/supabase';
+import { RealtimeChannel } from '@supabase/supabase-js';
 
 interface UseGameStateOptions {
   gameId?: string;
@@ -23,6 +25,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const supabaseChannelRef = useRef<RealtimeChannel | null>(null);
 
   // Load game from Supabase
   const loadGameState = useCallback(async (gameId: string) => {
@@ -30,9 +33,11 @@ export const useGameState = (options?: UseGameStateOptions) => {
     try {
       const game = await getGameById(gameId);
       if (game) {
+        console.log('Game loaded:', game);
         setGameState(game);
         return game;
       } else {
+        console.error('Game not found with ID:', gameId);
         setError('Game not found');
         return null;
       }
@@ -55,6 +60,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
     // Save game to Supabase
     const savedGame = await createGameInDb(newGame);
     if (savedGame) {
+      console.log('Game created:', savedGame);
       setGameState(savedGame);
       
       toast({
@@ -95,6 +101,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
       // Update game in Supabase
       const savedGame = await updateGameInDb(updatedGame);
       if (savedGame) {
+        console.log('Joined game:', savedGame);
         setGameState(savedGame);
         
         toast({
@@ -131,12 +138,10 @@ export const useGameState = (options?: UseGameStateOptions) => {
     const savedGame = await updateGameInDb(updatedGame);
     
     if (savedGame) {
+      console.log('Round started:', savedGame);
       setGameState(savedGame);
       
-      toast({
-        title: 'Round Started',
-        description: `Round ${savedGame.rounds.length} has begun!`,
-      });
+      sonnerToast.success(`Round ${savedGame.rounds.length} has begun!`);
     } else {
       toast({
         title: 'Error',
@@ -154,12 +159,10 @@ export const useGameState = (options?: UseGameStateOptions) => {
     const savedGame = await updateGameInDb(updatedGame);
     
     if (savedGame) {
+      console.log('Clue submitted:', savedGame);
       setGameState(savedGame);
       
-      toast({
-        title: 'Clue Submitted',
-        description: 'Your clue has been recorded',
-      });
+      sonnerToast.success('Your clue has been recorded');
       
       // If all clues are in, filter duplicates
       if (savedGame.status === GameStatus.REVIEWING_CLUES) {
@@ -168,12 +171,10 @@ export const useGameState = (options?: UseGameStateOptions) => {
           const savedFilteredGame = await updateGameInDb(filteredGame);
           
           if (savedFilteredGame) {
+            console.log('Clues filtered:', savedFilteredGame);
             setGameState(savedFilteredGame);
             
-            toast({
-              title: 'Clues Ready',
-              description: 'Duplicate clues have been filtered out',
-            });
+            sonnerToast.success('Duplicate clues have been filtered out');
           }
         }, 1000);
       }
@@ -194,14 +195,14 @@ export const useGameState = (options?: UseGameStateOptions) => {
     const savedGame = await updateGameInDb(updatedGame);
     
     if (savedGame) {
+      console.log('Guess submitted:', savedGame);
       setGameState(savedGame);
       
-      toast({
-        title: 'Guess Submitted',
-        description: savedGame.current_round?.correct // Changed from currentRound to current_round
-          ? 'Correct! Well done!'
-          : `Not quite. The word was "${savedGame.current_round?.secretWord}"`, // Changed from currentRound to current_round
-      });
+      if (savedGame.current_round?.correct) {
+        sonnerToast.success('Correct! Well done!');
+      } else {
+        sonnerToast.error(`Not quite. The word was "${savedGame.current_round?.secretWord}"`);
+      }
     } else {
       toast({
         title: 'Error',
@@ -215,33 +216,51 @@ export const useGameState = (options?: UseGameStateOptions) => {
   const leaveGame = useCallback(async () => {
     if (!gameState || !playerId) return;
     
+    // Clean up subscriptions
+    if (supabaseChannelRef.current) {
+      supabaseChannelRef.current.unsubscribe();
+      supabaseChannelRef.current = null;
+    }
+    
     const updatedGame = gameUtils.removePlayerFromGame(gameState, playerId);
     await updateGameInDb(updatedGame);
     
     setGameState(null);
     setPlayerId(null);
     
-    toast({
-      title: 'Left Game',
-      description: 'You have left the game',
-    });
-  }, [gameState, playerId, toast]);
+    sonnerToast.info('You have left the game');
+  }, [gameState, playerId]);
 
-  // Subscribe to real-time updates
+  // Set up and clean up real-time subscription
   useEffect(() => {
     if (gameState?.id) {
-      const subscription = subscribeToGame(gameState.id, (updatedGame) => {
-        // Only update if the game has changed
-        if (updatedGame.updated_at !== gameState.updated_at) {
-          setGameState(updatedGame);
-        }
+      // Clean up any existing subscription
+      if (supabaseChannelRef.current) {
+        supabaseChannelRef.current.unsubscribe();
+      }
+      
+      // Set up new subscription
+      const channel = subscribeToGame(gameState.id, (updatedGame) => {
+        console.log('Real-time update received:', updatedGame);
+        setGameState((currentGameState) => {
+          // Only update if the game has been updated more recently
+          if (!currentGameState || new Date(updatedGame.updated_at) > new Date(currentGameState.updated_at)) {
+            return updatedGame;
+          }
+          return currentGameState;
+        });
       });
       
+      supabaseChannelRef.current = channel;
+      
       return () => {
-        subscription.unsubscribe();
+        if (supabaseChannelRef.current) {
+          supabaseChannelRef.current.unsubscribe();
+          supabaseChannelRef.current = null;
+        }
       };
     }
-  }, [gameState?.id, gameState?.updated_at]);
+  }, [gameState?.id]);
 
   // Load initial game state if gameId is provided
   useEffect(() => {
