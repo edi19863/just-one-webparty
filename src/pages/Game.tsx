@@ -1,5 +1,5 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGameState } from "@/hooks/useGameState";
 import Header from "@/components/Header";
@@ -11,7 +11,10 @@ import { toast } from "sonner";
 const Game = () => {
   const { id: gameId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const savedPlayerId = localStorage.getItem(`player_id_${gameId}`);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  
+  // Get the stored player ID for this specific game
+  const storedPlayerId = gameId ? localStorage.getItem(`player_id_${gameId}`) : null;
   
   const {
     gameState,
@@ -25,12 +28,21 @@ const Game = () => {
     submitGuess
   } = useGameState({
     gameId,
-    playerId: savedPlayerId || undefined,
+    playerId: storedPlayerId || undefined,
   });
+
+  // Handle initial load and redirection
+  useEffect(() => {
+    // Mark initial load as complete after first render cycle
+    if (!initialLoadComplete && !loading) {
+      setInitialLoadComplete(true);
+    }
+  }, [loading, initialLoadComplete]);
 
   // Save player ID to localStorage whenever it changes
   useEffect(() => {
     if (gameId && playerId) {
+      console.log(`Saving player ID ${playerId} for game ${gameId}`);
       localStorage.setItem(`player_id_${gameId}`, playerId);
       localStorage.setItem("current_game_id", gameId);
     }
@@ -38,24 +50,30 @@ const Game = () => {
   
   // Handle errors
   useEffect(() => {
-    if (error) {
+    if (error && initialLoadComplete) {
+      console.error("Game error:", error);
       toast.error("Error loading game");
       navigate("/", { replace: true });
     }
-  }, [error, navigate]);
+  }, [error, navigate, initialLoadComplete]);
   
   // Check if player exists in the game
   useEffect(() => {
-    if (!loading && gameState && playerId && !currentPlayer) {
+    if (initialLoadComplete && !loading && gameState && playerId && !currentPlayer) {
+      console.log("Player not found in game:", playerId);
       toast.error("You're no longer part of this game");
-      localStorage.removeItem(`player_id_${gameId}`);
+      if (gameId) {
+        localStorage.removeItem(`player_id_${gameId}`);
+      }
       localStorage.removeItem("current_game_id");
       navigate("/", { replace: true });
     }
-  }, [loading, gameState, playerId, currentPlayer, gameId, navigate]);
+  }, [loading, gameState, playerId, currentPlayer, gameId, navigate, initialLoadComplete]);
   
   const handleLeaveGame = () => {
-    localStorage.removeItem(`player_id_${gameId}`);
+    if (gameId) {
+      localStorage.removeItem(`player_id_${gameId}`);
+    }
     localStorage.removeItem("current_game_id");
     leaveGame();
     navigate("/", { replace: true });

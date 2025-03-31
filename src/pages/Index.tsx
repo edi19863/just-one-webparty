@@ -1,22 +1,35 @@
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import CreateGame from "@/components/CreateGame";
 import JoinGame from "@/components/JoinGame";
 import { useGameState } from "@/hooks/useGameState";
+import { toast } from "sonner";
 
 const Index = () => {
   const { createGame, joinGame } = useGameState();
   const navigate = useNavigate();
+  const [checkingExistingGame, setCheckingExistingGame] = useState(true);
   
   // Check if we have an ongoing game and redirect to it
   useEffect(() => {
     const checkExistingGame = async () => {
-      const savedGameId = localStorage.getItem("current_game_id");
-      const savedPlayerId = localStorage.getItem("current_player_id");
-      
-      if (savedGameId && savedPlayerId) {
-        navigate(`/game/${savedGameId}`);
+      try {
+        const savedGameId = localStorage.getItem("current_game_id");
+        
+        if (savedGameId) {
+          const savedPlayerId = localStorage.getItem(`player_id_${savedGameId}`);
+          
+          if (savedPlayerId) {
+            console.log(`Found existing game: ${savedGameId} with player: ${savedPlayerId}`);
+            navigate(`/game/${savedGameId}`);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Error checking for existing game:", err);
+      } finally {
+        setCheckingExistingGame(false);
       }
     };
     
@@ -24,24 +37,46 @@ const Index = () => {
   }, [navigate]);
   
   const handleCreateGame = async (nickname: string) => {
-    const result = await createGame(nickname);
-    if (result) {
-      localStorage.setItem("current_game_id", result.gameId);
-      localStorage.setItem("current_player_id", result.playerId);
-      return result;
+    try {
+      const result = await createGame(nickname);
+      if (result) {
+        localStorage.setItem("current_game_id", result.gameId);
+        localStorage.setItem(`player_id_${result.gameId}`, result.playerId);
+        return result;
+      }
+      return null;
+    } catch (err) {
+      console.error("Error creating game:", err);
+      toast.error("Failed to create game. Please try again.");
+      return null;
     }
-    return null;
   };
   
   const handleJoinGame = async (code: string, nickname: string) => {
-    const result = await joinGame(code, nickname);
-    if (result) {
-      localStorage.setItem("current_game_id", result.gameId);
-      localStorage.setItem("current_player_id", result.playerId);
-      return result;
+    try {
+      const result = await joinGame(code, nickname);
+      if (result) {
+        localStorage.setItem("current_game_id", result.gameId);
+        localStorage.setItem(`player_id_${result.gameId}`, result.playerId);
+        return result;
+      }
+      return null;
+    } catch (err) {
+      console.error("Error joining game:", err);
+      toast.error("Failed to join game. Please check your code and try again.");
+      return null;
     }
-    return null;
   };
+
+  if (checkingExistingGame) {
+    return (
+      <div className="min-h-screen bg-game-background flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold animate-pulse-light">Loading...</h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-game-background">

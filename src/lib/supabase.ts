@@ -20,33 +20,43 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 
 // Game functions
 export const getGameByCode = async (code: string) => {
-  const { data, error } = await supabase
-    .from('games')
-    .select('*')
-    .eq('code', code.toUpperCase())
-    .single();
-  
-  if (error) {
-    console.error('Error fetching game:', error);
+  try {
+    const { data, error } = await supabase
+      .from('games')
+      .select('*')
+      .eq('code', code.toUpperCase())
+      .single();
+    
+    if (error) {
+      console.error('Error fetching game by code:', error);
+      return null;
+    }
+    
+    return data as Game;
+  } catch (err) {
+    console.error('Exception fetching game by code:', err);
     return null;
   }
-  
-  return data as Game;
 };
 
 export const getGameById = async (id: string) => {
-  const { data, error } = await supabase
-    .from('games')
-    .select('*')
-    .eq('id', id)
-    .single();
-  
-  if (error) {
-    console.error('Error fetching game:', error);
+  try {
+    const { data, error } = await supabase
+      .from('games')
+      .select('*')
+      .eq('id', id)
+      .single();
+    
+    if (error) {
+      console.error('Error fetching game:', error);
+      return null;
+    }
+    
+    return data as Game;
+  } catch (err) {
+    console.error('Exception fetching game:', err);
     return null;
   }
-  
-  return data as Game;
 };
 
 export const createGameInDb = async (game: Game) => {
@@ -83,25 +93,32 @@ export const updateGameInDb = async (game: Game) => {
     updated_at: new Date().toISOString()
   };
 
-  const { data, error } = await supabase
-    .from('games')
-    .update(gameToUpdate)
-    .eq('id', game.id)
-    .select()
-    .single();
-  
-  if (error) {
-    console.error('Error updating game:', error);
+  try {
+    const { data, error } = await supabase
+      .from('games')
+      .update(gameToUpdate)
+      .eq('id', game.id)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error updating game:', error);
+      return null;
+    }
+    
+    return data as Game;
+  } catch (err) {
+    console.error('Exception updating game:', err);
     return null;
   }
-  
-  return data as Game;
 };
 
 // Improved real-time subscription with proper channel management
 export const subscribeToGame = (gameId: string, callback: (game: Game) => void) => {
   // Create a unique channel name for this game
   const channelName = `game-updates:${gameId}`;
+  
+  console.log(`Setting up subscription for game ${gameId} on channel ${channelName}`);
   
   // Subscribe to changes on the games table for this specific game ID
   const channel = supabase
@@ -122,7 +139,7 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
       }
     )
     .subscribe((status) => {
-      console.log(`Supabase subscription status: ${status}`, channelName);
+      console.log(`Supabase subscription status for ${channelName}: ${status}`);
     });
   
   return channel;
