@@ -11,7 +11,7 @@ const Index = () => {
   
   // Check if we have an ongoing game and redirect to it
   useEffect(() => {
-    const checkExistingGame = () => {
+    const checkExistingGame = async () => {
       const savedGameId = localStorage.getItem("current_game_id");
       const savedPlayerId = localStorage.getItem("current_player_id");
       

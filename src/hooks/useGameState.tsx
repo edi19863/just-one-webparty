@@ -3,9 +3,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { Game, GameStatus } from '@/types/game';
 import * as gameUtils from '@/utils/gameUtils';
 import { useToast } from '@/components/ui/use-toast';
-
-// In a real app, we would use Supabase for real-time capabilities
-// This is a simplified version using local state for demonstration
+import { 
+  supabase, 
+  getGameById, 
+  getGameByCode, 
+  createGameInDb, 
+  updateGameInDb,
+  subscribeToGame 
+} from '@/lib/supabase';
 
 interface UseGameStateOptions {
   gameId?: string;
@@ -19,26 +24,14 @@ export const useGameState = (options?: UseGameStateOptions) => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
-  // In a real app, this would be replaced with Supabase subscription
-  // For demo purposes, we're using localStorage to persist game state
-  const saveGameState = useCallback((game: Game) => {
-    try {
-      localStorage.setItem(`game_${game.id}`, JSON.stringify(game));
-      // We also save by code for easy lookup
-      localStorage.setItem(`game_code_${game.code}`, game.id);
-    } catch (err) {
-      console.error('Error saving game state:', err);
-    }
-  }, []);
-
+  // Load game from Supabase
   const loadGameState = useCallback(async (gameId: string) => {
     setLoading(true);
     try {
-      const savedGame = localStorage.getItem(`game_${gameId}`);
-      if (savedGame) {
-        const parsedGame: Game = JSON.parse(savedGame);
-        setGameState(parsedGame);
-        return parsedGame;
+      const game = await getGameById(gameId);
+      if (game) {
+        setGameState(game);
+        return game;
       } else {
         setError('Game not found');
         return null;
@@ -58,23 +51,34 @@ export const useGameState = (options?: UseGameStateOptions) => {
     setPlayerId(id);
     
     const newGame = gameUtils.createNewGame(id, nickname);
-    setGameState(newGame);
-    saveGameState(newGame);
     
-    toast({
-      title: 'Game Created!',
-      description: `Your game code is ${newGame.code}`,
-    });
-    
-    return { gameId: newGame.id, playerId: id, gameCode: newGame.code };
-  }, [saveGameState, toast]);
+    // Save game to Supabase
+    const savedGame = await createGameInDb(newGame);
+    if (savedGame) {
+      setGameState(savedGame);
+      
+      toast({
+        title: 'Game Created!',
+        description: `Your game code is ${savedGame.code}`,
+      });
+      
+      return { gameId: savedGame.id, playerId: id, gameCode: savedGame.code };
+    } else {
+      toast({
+        title: 'Error',
+        description: 'Failed to create game',
+        variant: 'destructive',
+      });
+      return null;
+    }
+  }, [toast]);
 
   // Join an existing game
   const joinGame = useCallback(async (code: string, nickname: string) => {
     try {
-      // Find game by code
-      const gameId = localStorage.getItem(`game_code_${code.toUpperCase()}`);
-      if (!gameId) {
+      // Find game by code in Supabase
+      const game = await getGameByCode(code);
+      if (!game) {
         setError('Game not found');
         toast({
           title: 'Error',
@@ -84,21 +88,29 @@ export const useGameState = (options?: UseGameStateOptions) => {
         return null;
       }
       
-      const game = await loadGameState(gameId);
-      if (!game) return null;
-      
       // Add player to game
       const { game: updatedGame, playerId: newPlayerId } = gameUtils.addPlayerToGame(game, nickname);
       setPlayerId(newPlayerId);
-      setGameState(updatedGame);
-      saveGameState(updatedGame);
       
-      toast({
-        title: 'Joined Game',
-        description: `You've joined the game as ${nickname}`,
-      });
-      
-      return { gameId: game.id, playerId: newPlayerId };
+      // Update game in Supabase
+      const savedGame = await updateGameInDb(updatedGame);
+      if (savedGame) {
+        setGameState(savedGame);
+        
+        toast({
+          title: 'Joined Game',
+          description: `You've joined the game as ${nickname}`,
+        });
+        
+        return { gameId: savedGame.id, playerId: newPlayerId };
+      } else {
+        toast({
+          title: 'Error',
+          description: 'Failed to join game',
+          variant: 'destructive',
+        });
+        return null;
+      }
     } catch (err) {
       console.error('Error joining game:', err);
       setError('Error joining game');
@@ -109,72 +121,103 @@ export const useGameState = (options?: UseGameStateOptions) => {
       });
       return null;
     }
-  }, [loadGameState, saveGameState, toast]);
+  }, [toast]);
 
   // Start a new round
-  const startRound = useCallback(() => {
+  const startRound = useCallback(async () => {
     if (!gameState) return;
     
     const updatedGame = gameUtils.startNewRound(gameState);
-    setGameState(updatedGame);
-    saveGameState(updatedGame);
+    const savedGame = await updateGameInDb(updatedGame);
     
-    toast({
-      title: 'Round Started',
-      description: `Round ${updatedGame.rounds.length} has begun!`,
-    });
-  }, [gameState, saveGameState, toast]);
+    if (savedGame) {
+      setGameState(savedGame);
+      
+      toast({
+        title: 'Round Started',
+        description: `Round ${savedGame.rounds.length} has begun!`,
+      });
+    } else {
+      toast({
+        title: 'Error',
+        description: 'Failed to start round',
+        variant: 'destructive',
+      });
+    }
+  }, [gameState, toast]);
 
   // Submit a clue
-  const submitClue = useCallback((word: string) => {
+  const submitClue = useCallback(async (word: string) => {
     if (!gameState || !playerId) return;
     
     const updatedGame = gameUtils.addClue(gameState, playerId, word);
-    setGameState(updatedGame);
-    saveGameState(updatedGame);
+    const savedGame = await updateGameInDb(updatedGame);
     
-    toast({
-      title: 'Clue Submitted',
-      description: 'Your clue has been recorded',
-    });
-    
-    // If all clues are in, filter duplicates
-    if (updatedGame.status === GameStatus.REVIEWING_CLUES) {
-      setTimeout(() => {
-        const filteredGame = gameUtils.filterClues(updatedGame);
-        setGameState(filteredGame);
-        saveGameState(filteredGame);
-        
-        toast({
-          title: 'Clues Ready',
-          description: 'Duplicate clues have been filtered out',
-        });
-      }, 1000);
+    if (savedGame) {
+      setGameState(savedGame);
+      
+      toast({
+        title: 'Clue Submitted',
+        description: 'Your clue has been recorded',
+      });
+      
+      // If all clues are in, filter duplicates
+      if (savedGame.status === GameStatus.REVIEWING_CLUES) {
+        setTimeout(async () => {
+          const filteredGame = gameUtils.filterClues(savedGame);
+          const savedFilteredGame = await updateGameInDb(filteredGame);
+          
+          if (savedFilteredGame) {
+            setGameState(savedFilteredGame);
+            
+            toast({
+              title: 'Clues Ready',
+              description: 'Duplicate clues have been filtered out',
+            });
+          }
+        }, 1000);
+      }
+    } else {
+      toast({
+        title: 'Error',
+        description: 'Failed to submit clue',
+        variant: 'destructive',
+      });
     }
-  }, [gameState, playerId, saveGameState, toast]);
+  }, [gameState, playerId, toast]);
 
   // Submit a guess
-  const submitGuess = useCallback((guess: string) => {
+  const submitGuess = useCallback(async (guess: string) => {
     if (!gameState || !playerId) return;
     
     const updatedGame = gameUtils.submitGuess(gameState, guess);
-    setGameState(updatedGame);
-    saveGameState(updatedGame);
+    const savedGame = await updateGameInDb(updatedGame);
     
-    toast({
-      title: 'Guess Submitted',
-      description: updatedGame.currentRound?.correct 
-        ? 'Correct! Well done!'
-        : `Not quite. The word was "${updatedGame.currentRound?.secretWord}"`,
-    });
-  }, [gameState, playerId, saveGameState, toast]);
+    if (savedGame) {
+      setGameState(savedGame);
+      
+      toast({
+        title: 'Guess Submitted',
+        description: savedGame.currentRound?.correct 
+          ? 'Correct! Well done!'
+          : `Not quite. The word was "${savedGame.currentRound?.secretWord}"`,
+      });
+    } else {
+      toast({
+        title: 'Error',
+        description: 'Failed to submit guess',
+        variant: 'destructive',
+      });
+    }
+  }, [gameState, playerId, toast]);
 
   // Leave game
-  const leaveGame = useCallback(() => {
+  const leaveGame = useCallback(async () => {
     if (!gameState || !playerId) return;
     
     const updatedGame = gameUtils.removePlayerFromGame(gameState, playerId);
-    saveGameState(updatedGame);
+    await updateGameInDb(updatedGame);
+    
     setGameState(null);
     setPlayerId(null);
     
@@ -182,10 +225,23 @@ export const useGameState = (options?: UseGameStateOptions) => {
       title: 'Left Game',
       description: 'You have left the game',
     });
-  }, [gameState, playerId, saveGameState, toast]);
+  }, [gameState, playerId, toast]);
 
-  // Get current player
-  const currentPlayer = gameState?.players.find(p => p.id === playerId) || null;
+  // Subscribe to real-time updates
+  useEffect(() => {
+    if (gameState?.id) {
+      const subscription = subscribeToGame(gameState.id, (updatedGame) => {
+        // Only update if the game has changed
+        if (updatedGame.updatedAt !== gameState.updatedAt) {
+          setGameState(updatedGame);
+        }
+      });
+      
+      return () => {
+        subscription.unsubscribe();
+      };
+    }
+  }, [gameState?.id, gameState?.updatedAt]);
 
   // Load initial game state if gameId is provided
   useEffect(() => {
@@ -195,6 +251,9 @@ export const useGameState = (options?: UseGameStateOptions) => {
       setLoading(false);
     }
   }, [options?.gameId, loadGameState]);
+
+  // Get current player
+  const currentPlayer = gameState?.players.find(p => p.id === playerId) || null;
 
   return {
     gameState,

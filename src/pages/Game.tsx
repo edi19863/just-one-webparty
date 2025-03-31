@@ -1,4 +1,3 @@
-
 import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGameState } from "@/hooks/useGameState";
@@ -67,9 +66,9 @@ const Game = () => {
   
   return (
     <div className="min-h-screen bg-game-background">
-      <Header gameCode={gameState.code} onLeaveGame={handleLeaveGame} />
+      <Header gameCode={gameState?.code} onLeaveGame={handleLeaveGame} />
       
-      {gameState.status === GameStatus.LOBBY ? (
+      {gameState?.status === GameStatus.LOBBY ? (
         <Lobby 
           game={gameState} 
           currentPlayerId={playerId} 
