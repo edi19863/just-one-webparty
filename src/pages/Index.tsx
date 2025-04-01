@@ -21,7 +21,7 @@ const Index = () => {
           const savedPlayerId = localStorage.getItem(`player_id_${savedGameId}`);
           
           if (savedPlayerId) {
-            console.log(`Found existing game: ${savedGameId} with player: ${savedPlayerId}`);
+            console.log(`Partita esistente trovata: ${savedGameId} con giocatore: ${savedPlayerId}`);
             // No need to verify the game here - Game.tsx will handle that
             // Just redirect to the game page
             navigate(`/game/${savedGameId}`);
@@ -32,7 +32,7 @@ const Index = () => {
           }
         }
       } catch (err) {
-        console.error("Error checking for existing game:", err);
+        console.error("Errore nel controllo della partita esistente:", err);
         // Clear potentially corrupted storage
         localStorage.removeItem("current_game_id");
       } finally {
@@ -45,37 +45,37 @@ const Index = () => {
   
   const handleCreateGame = async (nickname: string) => {
     try {
-      console.log("Creating new game with nickname:", nickname);
+      console.log("Creazione nuova partita con nickname:", nickname);
       const result = await createGame(nickname);
       
       if (result) {
-        console.log(`Game created with ID: ${result.gameId}, code: ${result.gameCode}`);
+        console.log(`Partita creata con ID: ${result.gameId}, codice: ${result.gameCode}`);
         return result;
       } else {
-        console.error("Failed to create game - no result returned");
-        toast.error("Failed to create game. Please try again.");
+        console.error("Creazione partita fallita - nessun risultato restituito");
+        toast.error("Impossibile creare la partita. Riprova.");
       }
       return null;
     } catch (err) {
-      console.error("Error creating game:", err);
-      toast.error("Failed to create game. Please try again.");
+      console.error("Errore durante la creazione della partita:", err);
+      toast.error("Impossibile creare la partita. Riprova.");
       return null;
     }
   };
   
   const handleJoinGame = async (code: string, nickname: string) => {
     try {
-      console.log("Joining game with code:", code);
+      console.log("Partecipazione alla partita con codice:", code);
       const result = await joinGame(code, nickname);
       
       if (result) {
-        console.log(`Joined game with ID: ${result.gameId}`);
+        console.log(`Partecipazione alla partita con ID: ${result.gameId}`);
         return result;
       }
       return null;
     } catch (err) {
-      console.error("Error joining game:", err);
-      toast.error("Failed to join game. Please check your code and try again.");
+      console.error("Errore durante la partecipazione alla partita:", err);
+      toast.error("Impossibile partecipare alla partita. Controlla il codice e riprova.");
       return null;
     }
   };
@@ -84,7 +84,7 @@ const Index = () => {
     return (
       <div className="min-h-screen bg-game-background flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold animate-pulse-light">Loading...</h2>
+          <h2 className="text-2xl font-bold text-game-text animate-pulse-light">Caricamento...</h2>
         </div>
       </div>
     );
@@ -95,8 +95,8 @@ const Index = () => {
       <div className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-game-primary mb-4">Just One</h1>
-          <p className="text-xl text-gray-600">
-            The fun multiplayer word-guessing party game!
+          <p className="text-xl text-game-text">
+            Il divertente gioco di parole multiplayer per giocare con gli amici!
           </p>
         </div>
         
@@ -106,14 +106,14 @@ const Index = () => {
         </div>
         
         <div className="mt-12 max-w-2xl mx-auto text-center">
-          <h2 className="text-2xl font-semibold mb-4">How to Play</h2>
-          <ol className="text-left space-y-3 text-gray-700 list-decimal pl-6">
-            <li>One player is randomly selected as the guesser each round.</li>
-            <li>All other players see a secret word that the guesser must discover.</li>
-            <li>Each non-guessing player submits a one-word clue to help the guesser.</li>
-            <li>Identical or similar clues are automatically filtered out.</li>
-            <li>The guesser sees the remaining clues and makes a guess.</li>
-            <li>Points are scored for correct guesses!</li>
+          <h2 className="text-2xl font-semibold mb-4 text-game-text">Come si gioca</h2>
+          <ol className="text-left space-y-3 text-game-text pl-6 list-decimal">
+            <li>Un giocatore viene selezionato casualmente come indovino ad ogni turno.</li>
+            <li>Tutti gli altri giocatori vedono una parola segreta che l'indovino deve scoprire.</li>
+            <li>Ogni giocatore non indovino invia un indizio di una parola per aiutare l'indovino.</li>
+            <li>Gli indizi identici o simili vengono automaticamente filtrati.</li>
+            <li>L'indovino vede gli indizi rimanenti e fa un tentativo.</li>
+            <li>Si ottengono punti per le risposte corrette!</li>
           </ol>
         </div>
       </div>

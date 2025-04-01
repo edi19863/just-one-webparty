@@ -67,14 +67,14 @@ export default {
 					'primary': '#6366F1',
 					'secondary': '#10B981',
 					'accent': '#F59E0B',
-					'background': '#121212', // Changed to dark
-					'card': '#1e1e1e', // New dark card background
-					'text': '#F3F4F6', // Changed text color for dark mode
-					'muted': '#6b7280', // Muted text for dark mode
+					'background': '#121212',
+					'card': '#1e1e1e',
+					'text': '#F3F4F6',
+					'muted': '#a3a3a3', // Reso più chiaro per miglior contrasto
 					'error': '#EF4444',
 					'success': '#22c55e',
-					'border': '#2d2d2d', // Dark border color
-					'highlight': '#4338ca', // Highlight color for dark mode
+					'border': '#2d2d2d',
+					'highlight': '#4338ca',
 				}
 			},
 			borderRadius: {

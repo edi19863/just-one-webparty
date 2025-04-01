@@ -9,14 +9,14 @@ interface HeaderProps {
 
 const Header = ({ gameCode, onLeaveGame }: HeaderProps) => {
   return (
-    <header className="bg-white shadow-sm py-4">
+    <header className="bg-game-card border-b border-game-border py-4 shadow-md">
       <div className="container mx-auto px-4 flex justify-between items-center">
         <Link to="/" className="text-2xl font-bold text-game-primary">Just One</Link>
         
         <div className="flex items-center gap-4">
           {gameCode && (
             <div className="flex items-center">
-              <span className="mr-2 text-sm font-medium">Game Code:</span>
+              <span className="mr-2 text-sm font-medium text-game-text">Codice Partita:</span>
               <span className="game-code">{gameCode}</span>
             </div>
           )}
@@ -25,9 +25,9 @@ const Header = ({ gameCode, onLeaveGame }: HeaderProps) => {
             <Button 
               variant="outline" 
               onClick={onLeaveGame}
-              className="text-gray-600 hover:text-game-error"
+              className="text-game-text hover:text-game-error border-game-border hover:border-game-error"
             >
-              Leave Game
+              Abbandona
             </Button>
           )}
         </div>
