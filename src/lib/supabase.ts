@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import type { Game } from '@/types/game';
 
@@ -9,6 +10,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false, // Don't persist the session to avoid auth issues
     autoRefreshToken: false, // Don't auto refresh tokens
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10 // Increase events per second for better real-time experience
+    }
   }
 });
 
@@ -116,7 +122,6 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
   // Clean up existing channels first
   const existingChannels = supabase.getChannels();
   for (const channel of existingChannels) {
-    // Use type assertion instead of accessing config directly
     const channelInfo = channel as any;
     if (channelInfo?.topic && channelInfo.topic.includes(gameId)) {
       console.log(`Removing existing channel: ${channelInfo.topic}`);
@@ -126,7 +131,16 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
   
   // Create a new subscription with enhanced options
   const channel = supabase
-    .channel(channelName)
+    .channel(channelName, {
+      config: {
+        broadcast: {
+          self: true // Ensure client receives their own broadcasts
+        },
+        presence: {
+          key: gameId,
+        }
+      }
+    })
     .on(
       'postgres_changes',
       {
@@ -146,13 +160,17 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
       console.log(`Supabase subscription status for ${channelName}: ${status}`, err || '');
       
       // If subscription fails, try to reconnect
-      if (status === 'CHANNEL_ERROR') {
-        console.log('Subscription error, attempting to reconnect in 2 seconds...');
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        console.log('Subscription error or timeout, attempting to reconnect in 1 second...');
         setTimeout(() => {
           console.log('Reconnecting to channel...');
-          channel.unsubscribe();
-          channel.subscribe();
-        }, 2000);
+          try {
+            channel.unsubscribe();
+            channel.subscribe();
+          } catch (e) {
+            console.error('Error during reconnection:', e);
+          }
+        }, 1000);
       }
     });
   

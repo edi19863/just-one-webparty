@@ -26,6 +26,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const supabaseChannelRef = useRef<RealtimeChannel | null>(null);
+  const lastUpdateTimeRef = useRef<number>(0);
 
   // Load game from Supabase
   const loadGameState = useCallback(async (gameId: string) => {
@@ -36,6 +37,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
       if (game) {
         console.log('Game loaded:', game);
         setGameState(game);
+        lastUpdateTimeRef.current = Date.now();
         return game;
       } else {
         console.error('Game not found with ID:', gameId);
@@ -63,6 +65,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
     if (savedGame) {
       console.log('Game created:', savedGame);
       setGameState(savedGame);
+      lastUpdateTimeRef.current = Date.now();
       
       toast({
         title: 'Game Created!',
@@ -109,6 +112,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
       if (savedGame) {
         console.log('Joined game:', savedGame);
         setGameState(savedGame);
+        lastUpdateTimeRef.current = Date.now();
         
         toast({
           title: 'Joined Game',
@@ -147,6 +151,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
     if (savedGame) {
       console.log('Round started:', savedGame);
       setGameState(savedGame);
+      lastUpdateTimeRef.current = Date.now();
       
       sonnerToast.success(`Round ${savedGame.rounds.length} has begun!`);
     } else {
@@ -168,6 +173,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
     if (savedGame) {
       console.log('Clue submitted:', savedGame);
       setGameState(savedGame);
+      lastUpdateTimeRef.current = Date.now();
       
       sonnerToast.success('Your clue has been recorded');
       
@@ -180,6 +186,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
           if (savedFilteredGame) {
             console.log('Clues filtered:', savedFilteredGame);
             setGameState(savedFilteredGame);
+            lastUpdateTimeRef.current = Date.now();
             
             sonnerToast.success('Duplicate clues have been filtered out');
           }
@@ -204,6 +211,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
     if (savedGame) {
       console.log('Guess submitted:', savedGame);
       setGameState(savedGame);
+      lastUpdateTimeRef.current = Date.now();
       
       if (savedGame.current_round?.correct) {
         sonnerToast.success('Correct! Well done!');
@@ -238,6 +246,38 @@ export const useGameState = (options?: UseGameStateOptions) => {
     sonnerToast.info('You have left the game');
   }, [gameState, playerId]);
 
+  // Poll for game updates as a fallback mechanism
+  useEffect(() => {
+    let pollInterval: number | undefined;
+    
+    if (gameState?.id && !pollInterval) {
+      pollInterval = window.setInterval(async () => {
+        // Only poll if it's been more than 5 seconds since our last update
+        const timeSinceLastUpdate = Date.now() - lastUpdateTimeRef.current;
+        if (timeSinceLastUpdate > 5000) {
+          console.log('Polling for game updates...');
+          const updatedGame = await getGameById(gameState.id);
+          if (updatedGame) {
+            const updatedAt = new Date(updatedGame.updated_at).getTime();
+            const currentUpdatedAt = gameState ? new Date(gameState.updated_at).getTime() : 0;
+            
+            if (updatedAt > currentUpdatedAt) {
+              console.log('Game updated via polling:', updatedGame);
+              setGameState(updatedGame);
+              lastUpdateTimeRef.current = Date.now();
+            }
+          }
+        }
+      }, 5000); // Poll every 5 seconds
+    }
+    
+    return () => {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+      }
+    };
+  }, [gameState?.id]);
+
   // Set up and clean up real-time subscription
   useEffect(() => {
     if (gameState?.id) {
@@ -252,6 +292,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
         setGameState((currentGameState) => {
           // Only update if the game has been updated more recently
           if (!currentGameState || new Date(updatedGame.updated_at) > new Date(currentGameState.updated_at)) {
+            lastUpdateTimeRef.current = Date.now();
             return updatedGame;
           }
           return currentGameState;
