@@ -51,6 +51,12 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
     }
   };
 
+  // Function to handle input changes and force uppercase
+  const handleGameCodeChange = (value: string) => {
+    // Convert to uppercase and set
+    setGameCode(value.toUpperCase());
+  };
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
@@ -69,7 +75,7 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
               <InputOTP 
                 maxLength={5}
                 value={gameCode}
-                onChange={setGameCode}
+                onChange={handleGameCodeChange}
                 pattern="[A-Z0-9]" // Accept uppercase letters and numbers
                 className="flex justify-center"
               >
