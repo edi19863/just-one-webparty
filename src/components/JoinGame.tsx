@@ -73,7 +73,7 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
                 render={({ slots }) => (
                   <InputOTPGroup>
                     {slots.map((slot, index) => (
-                      <InputOTPSlot key={index} index={index} className="uppercase" />
+                      <InputOTPSlot key={index} {...slot} index={index} className="uppercase" />
                     ))}
                   </InputOTPGroup>
                 )}
