@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 interface JoinGameProps {
   onJoinGame: (code: string, nickname: string) => Promise<{ gameId: string; playerId: string; } | null>;
@@ -52,9 +51,10 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
   };
 
   // Function to handle input changes and force uppercase
-  const handleGameCodeChange = (value: string) => {
-    // Convert to uppercase and set
-    setGameCode(value.toUpperCase());
+  const handleGameCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // Convert to uppercase and limit to 5 characters
+    const value = e.target.value.toUpperCase().slice(0, 5);
+    setGameCode(value);
   };
 
   return (
@@ -72,21 +72,19 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
               <label htmlFor="gameCode" className="text-sm font-medium">
                 Game Code
               </label>
-              <InputOTP 
-                maxLength={5}
+              <Input
+                id="gameCode"
+                placeholder="Enter 5-character game code"
                 value={gameCode}
                 onChange={handleGameCodeChange}
-                pattern="[A-Z0-9]" // Accept uppercase letters and numbers
-                className="flex justify-center"
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} className="uppercase" />
-                  <InputOTPSlot index={1} className="uppercase" />
-                  <InputOTPSlot index={2} className="uppercase" />
-                  <InputOTPSlot index={3} className="uppercase" />
-                  <InputOTPSlot index={4} className="uppercase" />
-                </InputOTPGroup>
-              </InputOTP>
+                className="text-center text-lg font-mono uppercase tracking-wider"
+                maxLength={5}
+                pattern="[A-Z0-9]{5}"
+                required
+              />
+              <p className="text-xs text-muted-foreground text-center">
+                5 characters, letters and numbers only
+              </p>
             </div>
             <div className="space-y-2">
               <label htmlFor="nickname" className="text-sm font-medium">
