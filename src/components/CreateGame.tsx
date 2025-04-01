@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface CreateGameProps {
   onCreateGame: (nickname: string) => Promise<{ gameId: string; playerId: string; gameCode: string } | null>;
@@ -22,13 +23,26 @@ const CreateGame = ({ onCreateGame }: CreateGameProps) => {
     try {
       const result = await onCreateGame(nickname.trim());
       if (result) {
-        console.log("Navigating to game:", result.gameId);
-        navigate(`/game/${result.gameId}`);
+        console.log("Game created successfully with ID:", result.gameId);
+        
+        // Ensure localStorage is set before navigating
+        localStorage.setItem("current_game_id", result.gameId);
+        localStorage.setItem(`player_id_${result.gameId}`, result.playerId);
+        
+        toast.success(`Game created! Your code is ${result.gameCode}`);
+        
+        // Add a small delay before navigating to ensure data is stored
+        setTimeout(() => {
+          console.log("Navigating to game:", result.gameId);
+          navigate(`/game/${result.gameId}`);
+        }, 200);
       } else {
         console.error("Failed to create game - no result returned");
+        toast.error("Failed to create game. Please try again.");
       }
     } catch (err) {
       console.error("Error in create game form:", err);
+      toast.error("Error creating game. Please try again.");
     } finally {
       setIsCreating(false);
     }

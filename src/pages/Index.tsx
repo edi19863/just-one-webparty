@@ -22,18 +22,9 @@ const Index = () => {
           
           if (savedPlayerId) {
             console.log(`Found existing game: ${savedGameId} with player: ${savedPlayerId}`);
-            
-            // Try to check if the game exists before redirecting
-            try {
-              // We'll just check if navigation should happen - the actual game loading happens in Game.tsx
-              navigate(`/game/${savedGameId}`);
-            } catch (err) {
-              console.error("Error navigating to saved game:", err);
-              // If there's an error, clear the storage to prevent loops
-              localStorage.removeItem(`player_id_${savedGameId}`);
-              localStorage.removeItem("current_game_id");
-              toast.error("Couldn't load saved game - starting fresh");
-            }
+            // No need to verify the game here - Game.tsx will handle that
+            // Just redirect to the game page
+            navigate(`/game/${savedGameId}`);
             return;
           }
         }
@@ -52,14 +43,7 @@ const Index = () => {
   const handleCreateGame = async (nickname: string) => {
     try {
       console.log("Creating new game with nickname:", nickname);
-      const result = await createGame(nickname);
-      if (result) {
-        console.log("Game created successfully:", result);
-        localStorage.setItem("current_game_id", result.gameId);
-        localStorage.setItem(`player_id_${result.gameId}`, result.playerId);
-        return result;
-      }
-      return null;
+      return await createGame(nickname);
     } catch (err) {
       console.error("Error creating game:", err);
       toast.error("Failed to create game. Please try again.");
@@ -69,13 +53,8 @@ const Index = () => {
   
   const handleJoinGame = async (code: string, nickname: string) => {
     try {
-      const result = await joinGame(code, nickname);
-      if (result) {
-        localStorage.setItem("current_game_id", result.gameId);
-        localStorage.setItem(`player_id_${result.gameId}`, result.playerId);
-        return result;
-      }
-      return null;
+      console.log("Joining game with code:", code);
+      return await joinGame(code, nickname);
     } catch (err) {
       console.error("Error joining game:", err);
       toast.error("Failed to join game. Please check your code and try again.");

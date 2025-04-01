@@ -32,13 +32,34 @@ const Game = () => {
     playerId: storedPlayerId || undefined,
   });
 
-  // Handle initial load and redirection
+  // Handle initial load
   useEffect(() => {
-    // Mark initial load as complete after first render cycle
     if (!initialLoadComplete && !loading) {
+      console.log("Initial game load complete:", gameState?.id);
       setInitialLoadComplete(true);
     }
-  }, [loading, initialLoadComplete]);
+  }, [loading, initialLoadComplete, gameState]);
+
+  // Monitor load attempts
+  useEffect(() => {
+    let loadInterval: number | undefined;
+    
+    if (loading) {
+      loadInterval = window.setInterval(() => {
+        setLoadAttempts(prev => {
+          const newCount = prev + 1;
+          console.log(`Loading attempt ${newCount}...`);
+          return newCount;
+        });
+      }, 1000);
+    } else if (loadInterval) {
+      clearInterval(loadInterval);
+    }
+    
+    return () => {
+      if (loadInterval) clearInterval(loadInterval);
+    };
+  }, [loading]);
 
   // Save player ID to localStorage whenever it changes
   useEffect(() => {
@@ -49,7 +70,7 @@ const Game = () => {
     }
   }, [gameId, playerId]);
   
-  // Handle errors - with improved error handling to prevent loops
+  // Handle errors
   useEffect(() => {
     if (error && initialLoadComplete) {
       console.error("Game error:", error);
@@ -86,14 +107,9 @@ const Game = () => {
     }
   }, [loading, gameState, playerId, currentPlayer, gameId, navigate, initialLoadComplete]);
 
-  // Add an additional safeguard for repeated load failures
+  // Handle too many load attempts
   useEffect(() => {
-    if (loading) {
-      setLoadAttempts(prev => prev + 1);
-    }
-    
-    // If we've tried loading 3+ times and still loading, assume there's an issue
-    if (loadAttempts >= 3 && loading) {
+    if (loadAttempts >= 10 && loading) {
       console.error("Too many load attempts, assuming game is inaccessible");
       
       // Clear localStorage to break potential loops
@@ -103,9 +119,11 @@ const Game = () => {
       localStorage.removeItem("current_game_id");
       
       toast.error("Unable to load game after multiple attempts");
-      navigate("/", { replace: true });
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 1000);
     }
-  }, [loading, loadAttempts, gameId, navigate]);
+  }, [loadAttempts, gameId, navigate, loading]);
   
   const handleLeaveGame = () => {
     if (gameId) {
@@ -116,11 +134,11 @@ const Game = () => {
     navigate("/", { replace: true });
   };
   
-  if (loading) {
+  if (loading && loadAttempts < 10) {
     return (
       <div className="min-h-screen bg-game-background flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold animate-pulse-light">Loading game...</h2>
+          <h2 className="text-2xl font-bold animate-pulse-light">Loading game... ({loadAttempts})</h2>
         </div>
       </div>
     );

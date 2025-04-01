@@ -10,16 +10,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false, // Don't persist the session to avoid auth issues
     autoRefreshToken: false, // Don't auto refresh tokens
-  },
-  global: {
-    headers: {
-      'x-app-role': 'app_user', // This header is meant to bypass RLS but might not work without proper policies
-    }
-  },
-  realtime: {
-    params: {
-      eventsPerSecond: 10
-    }
   }
 });
 
@@ -124,17 +114,18 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
   
   console.log(`Setting up enhanced subscription for game ${gameId} on channel ${channelName}`);
   
-  // First, remove any existing subscription with the same name to avoid duplicates
-  supabase.removeChannel(supabase.getChannels().find(ch => ch.name === channelName));
+  // Clean up existing channels first
+  const existingChannels = supabase.getChannels();
+  for (const channel of existingChannels) {
+    if (channel.toURI().includes(gameId)) {
+      console.log(`Removing existing channel: ${channel.toURI()}`);
+      supabase.removeChannel(channel);
+    }
+  }
   
   // Create a new subscription with enhanced options
   const channel = supabase
-    .channel(channelName, {
-      config: {
-        broadcast: { self: true }, // Receive events from self as well
-        presence: { key: gameId }, // Track presence with game ID
-      }
-    })
+    .channel(channelName)
     .on(
       'postgres_changes',
       {

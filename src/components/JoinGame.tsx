@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface JoinGameProps {
   onJoinGame: (code: string, nickname: string) => Promise<{ gameId: string; playerId: string; } | null>;
@@ -23,8 +24,25 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
     try {
       const result = await onJoinGame(gameCode.trim(), nickname.trim());
       if (result) {
-        navigate(`/game/${result.gameId}`);
+        console.log("Successfully joined game:", result.gameId);
+        
+        // Ensure localStorage is set before navigating
+        localStorage.setItem("current_game_id", result.gameId);
+        localStorage.setItem(`player_id_${result.gameId}`, result.playerId);
+        
+        toast.success(`Joined the game!`);
+        
+        // Add a small delay before navigating to ensure data is stored
+        setTimeout(() => {
+          console.log("Navigating to joined game:", result.gameId);
+          navigate(`/game/${result.gameId}`);
+        }, 200);
+      } else {
+        toast.error("Failed to join game. Please check your code and try again.");
       }
+    } catch (err) {
+      console.error("Error joining game:", err);
+      toast.error("Error joining game. Please try again.");
     } finally {
       setIsJoining(false);
     }
