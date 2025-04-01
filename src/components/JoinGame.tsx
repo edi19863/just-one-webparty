@@ -70,6 +70,7 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
                 maxLength={5}
                 value={gameCode}
                 onChange={setGameCode}
+                pattern="[A-Z0-9]" // Accept uppercase letters and numbers
                 className="flex justify-center"
               >
                 <InputOTPGroup>
