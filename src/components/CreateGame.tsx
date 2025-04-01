@@ -22,8 +22,13 @@ const CreateGame = ({ onCreateGame }: CreateGameProps) => {
     try {
       const result = await onCreateGame(nickname.trim());
       if (result) {
+        console.log("Navigating to game:", result.gameId);
         navigate(`/game/${result.gameId}`);
+      } else {
+        console.error("Failed to create game - no result returned");
       }
+    } catch (err) {
+      console.error("Error in create game form:", err);
     } finally {
       setIsCreating(false);
     }

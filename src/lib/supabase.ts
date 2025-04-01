@@ -5,7 +5,7 @@ import type { Game } from '@/types/game';
 const supabaseUrl = 'https://tqvnpmhfavjiqxplutwk.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxdm5wbWhmYXZqaXF4cGx1dHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM0NjAzOTAsImV4cCI6MjA1OTAzNjM5MH0.7cLrQfVWwIw_p0V4xfZDG7MZCQpDyov-Qz_5cNCmD_Y';
 
-// Create the Supabase client with auth disabled but with better configuration for real-time
+// Create the Supabase client with optimized configuration for cross-browser compatibility
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false, // Don't persist the session to avoid auth issues
@@ -125,7 +125,7 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
   console.log(`Setting up enhanced subscription for game ${gameId} on channel ${channelName}`);
   
   // First, remove any existing subscription with the same name to avoid duplicates
-  supabase.removeChannel(supabase.getChannel(channelName));
+  supabase.removeChannel(supabase.getChannels().find(ch => ch.name === channelName));
   
   // Create a new subscription with enhanced options
   const channel = supabase
@@ -154,7 +154,7 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
       console.log(`Supabase subscription status for ${channelName}: ${status}`, err || '');
       
       // If subscription fails, try to reconnect
-      if (status === 'SUBSCRIPTION_ERROR' || status === 'CHANNEL_ERROR') {
+      if (status === 'CHANNEL_ERROR') {
         console.log('Subscription error, attempting to reconnect in 2 seconds...');
         setTimeout(() => {
           console.log('Reconnecting to channel...');

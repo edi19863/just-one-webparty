@@ -51,8 +51,10 @@ const Index = () => {
   
   const handleCreateGame = async (nickname: string) => {
     try {
+      console.log("Creating new game with nickname:", nickname);
       const result = await createGame(nickname);
       if (result) {
+        console.log("Game created successfully:", result);
         localStorage.setItem("current_game_id", result.gameId);
         localStorage.setItem(`player_id_${result.gameId}`, result.playerId);
         return result;
