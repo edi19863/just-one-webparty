@@ -5,7 +5,7 @@ import type { Game } from '@/types/game';
 const supabaseUrl = 'https://tqvnpmhfavjiqxplutwk.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxdm5wbWhmYXZqaXF4cGx1dHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM0NjAzOTAsImV4cCI6MjA1OTAzNjM5MH0.7cLrQfVWwIw_p0V4xfZDG7MZCQpDyov-Qz_5cNCmD_Y';
 
-// Create the Supabase client with auth disabled
+// Create the Supabase client with auth disabled but with better configuration for real-time
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false, // Don't persist the session to avoid auth issues
@@ -14,6 +14,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   global: {
     headers: {
       'x-app-role': 'app_user', // This header is meant to bypass RLS but might not work without proper policies
+    }
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
     }
   }
 });
@@ -113,16 +118,23 @@ export const updateGameInDb = async (game: Game) => {
   }
 };
 
-// Improved real-time subscription with proper channel management
+// Enhanced real-time subscription with better channel management and reconnection logic
 export const subscribeToGame = (gameId: string, callback: (game: Game) => void) => {
-  // Create a unique channel name for this game
   const channelName = `game-updates:${gameId}`;
   
-  console.log(`Setting up subscription for game ${gameId} on channel ${channelName}`);
+  console.log(`Setting up enhanced subscription for game ${gameId} on channel ${channelName}`);
   
-  // Subscribe to changes on the games table for this specific game ID
+  // First, remove any existing subscription with the same name to avoid duplicates
+  supabase.removeChannel(supabase.getChannel(channelName));
+  
+  // Create a new subscription with enhanced options
   const channel = supabase
-    .channel(channelName)
+    .channel(channelName, {
+      config: {
+        broadcast: { self: true }, // Receive events from self as well
+        presence: { key: gameId }, // Track presence with game ID
+      }
+    })
     .on(
       'postgres_changes',
       {
@@ -132,14 +144,24 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
         filter: `id=eq.${gameId}`
       },
       (payload) => {
-        console.log('Received real-time update:', payload);
+        console.log(`Received real-time update for game ${gameId}:`, payload);
         if (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT') {
           callback(payload.new as Game);
         }
       }
     )
-    .subscribe((status) => {
-      console.log(`Supabase subscription status for ${channelName}: ${status}`);
+    .subscribe((status, err) => {
+      console.log(`Supabase subscription status for ${channelName}: ${status}`, err || '');
+      
+      // If subscription fails, try to reconnect
+      if (status === 'SUBSCRIPTION_ERROR' || status === 'CHANNEL_ERROR') {
+        console.log('Subscription error, attempting to reconnect in 2 seconds...');
+        setTimeout(() => {
+          console.log('Reconnecting to channel...');
+          channel.unsubscribe();
+          channel.subscribe();
+        }, 2000);
+      }
     });
   
   return channel;
