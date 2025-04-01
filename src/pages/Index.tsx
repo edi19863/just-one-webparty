@@ -11,7 +11,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [checkingExistingGame, setCheckingExistingGame] = useState(true);
   
-  // Check if we have an ongoing game and redirect to it
+  // Verifica se abbiamo una partita in corso e reindirizza ad essa
   useEffect(() => {
     const checkExistingGame = async () => {
       try {
@@ -22,18 +22,18 @@ const Index = () => {
           
           if (savedPlayerId) {
             console.log(`Partita esistente trovata: ${savedGameId} con giocatore: ${savedPlayerId}`);
-            // No need to verify the game here - Game.tsx will handle that
-            // Just redirect to the game page
+            // Non è necessario verificare la partita qui - Game.tsx se ne occuperà
+            // Reindirizza semplicemente alla pagina della partita
             navigate(`/game/${savedGameId}`);
             return;
           } else {
-            // Player ID not found, clear game ID
+            // ID giocatore non trovato, cancella ID partita
             localStorage.removeItem("current_game_id");
           }
         }
       } catch (err) {
         console.error("Errore nel controllo della partita esistente:", err);
-        // Clear potentially corrupted storage
+        // Cancella lo storage potenzialmente corrotto
         localStorage.removeItem("current_game_id");
       } finally {
         setCheckingExistingGame(false);

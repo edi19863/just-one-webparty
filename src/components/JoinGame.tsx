@@ -22,37 +22,37 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
     
     setIsJoining(true);
     try {
-      console.log("Joining game with code:", gameCode.trim());
+      console.log("Partecipazione alla partita con codice:", gameCode.trim());
       const result = await onJoinGame(gameCode.trim(), nickname.trim());
       
       if (result) {
-        console.log("Successfully joined game:", result.gameId);
+        console.log("Partecipazione alla partita completata con successo:", result.gameId);
         
-        // Ensure localStorage is set before navigating
+        // Memorizza i dati nel localStorage prima di navigare
         localStorage.setItem("current_game_id", result.gameId);
         localStorage.setItem(`player_id_${result.gameId}`, result.playerId);
         
-        toast.success(`Joined the game!`);
+        toast.success(`Partita raggiunta con successo!`);
         
-        // Add a small delay before navigating to ensure data is stored
+        // Piccolo ritardo prima di navigare per assicurarsi che i dati siano memorizzati
         setTimeout(() => {
-          console.log("Navigating to joined game:", result.gameId);
+          console.log("Navigazione alla partita:", result.gameId);
           navigate(`/game/${result.gameId}`);
         }, 200);
       } else {
-        toast.error("Failed to join game. Please check your code and try again.");
+        toast.error("Impossibile partecipare alla partita. Verifica il codice e riprova.");
       }
     } catch (err) {
-      console.error("Error joining game:", err);
-      toast.error("Error joining game. Please try again.");
+      console.error("Errore durante la partecipazione alla partita:", err);
+      toast.error("Errore durante la partecipazione alla partita. Riprova.");
     } finally {
       setIsJoining(false);
     }
   };
 
-  // Function to handle input changes and force uppercase
+  // Funzione per gestire i cambiamenti di input e forzare maiuscolo
   const handleGameCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Convert to uppercase and limit to 5 characters
+    // Converti in maiuscolo e limita a 5 caratteri
     const value = e.target.value.toUpperCase().slice(0, 5);
     setGameCode(value);
   };
@@ -60,9 +60,9 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-xl font-bold">Join Existing Game</CardTitle>
+        <CardTitle className="text-xl font-bold">Partecipa a una Partita</CardTitle>
         <CardDescription>
-          Enter a game code to join an existing game
+          Inserisci un codice per partecipare a una partita esistente
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -70,11 +70,11 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
           <div className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="gameCode" className="text-sm font-medium">
-                Game Code
+                Codice Partita
               </label>
               <Input
                 id="gameCode"
-                placeholder="Enter 5-character game code"
+                placeholder="Inserisci codice di 5 caratteri"
                 value={gameCode}
                 onChange={handleGameCodeChange}
                 className="text-center text-lg font-mono uppercase tracking-wider"
@@ -83,16 +83,16 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
                 required
               />
               <p className="text-xs text-muted-foreground text-center">
-                5 characters, letters and numbers only
+                5 caratteri, solo lettere e numeri
               </p>
             </div>
             <div className="space-y-2">
               <label htmlFor="nickname" className="text-sm font-medium">
-                Your Nickname
+                Il Tuo Nickname
               </label>
               <Input
                 id="nickname"
-                placeholder="Enter your nickname"
+                placeholder="Inserisci il tuo nickname"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 required
@@ -108,7 +108,7 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
             className="game-button-secondary w-full"
             disabled={isJoining || gameCode.length < 5 || !nickname.trim()}
           >
-            {isJoining ? "Joining..." : "Join Game"}
+            {isJoining ? "Partecipazione..." : "Partecipa"}
           </Button>
         </CardFooter>
       </form>

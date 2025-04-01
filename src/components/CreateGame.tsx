@@ -23,26 +23,26 @@ const CreateGame = ({ onCreateGame }: CreateGameProps) => {
     try {
       const result = await onCreateGame(nickname.trim());
       if (result) {
-        console.log("Game created successfully with ID:", result.gameId);
+        console.log("Partita creata con successo con ID:", result.gameId);
         
-        // Ensure localStorage is set before navigating
+        // Memorizza i dati nel localStorage prima di navigare
         localStorage.setItem("current_game_id", result.gameId);
         localStorage.setItem(`player_id_${result.gameId}`, result.playerId);
         
-        toast.success(`Game created! Your code is ${result.gameCode}`);
+        toast.success(`Partita creata! Il tuo codice è ${result.gameCode}`);
         
-        // Add a small delay before navigating to ensure data is stored
+        // Piccolo ritardo prima di navigare per assicurarsi che i dati siano memorizzati
         setTimeout(() => {
-          console.log("Navigating to game:", result.gameId);
+          console.log("Navigazione alla partita:", result.gameId);
           navigate(`/game/${result.gameId}`);
         }, 200);
       } else {
-        console.error("Failed to create game - no result returned");
-        toast.error("Failed to create game. Please try again.");
+        console.error("Impossibile creare la partita - nessun risultato restituito");
+        toast.error("Impossibile creare la partita. Riprova.");
       }
     } catch (err) {
-      console.error("Error in create game form:", err);
-      toast.error("Error creating game. Please try again.");
+      console.error("Errore nel modulo di creazione partita:", err);
+      toast.error("Errore durante la creazione della partita. Riprova.");
     } finally {
       setIsCreating(false);
     }
@@ -51,9 +51,9 @@ const CreateGame = ({ onCreateGame }: CreateGameProps) => {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-xl font-bold">Create New Game</CardTitle>
+        <CardTitle className="text-xl font-bold">Crea Nuova Partita</CardTitle>
         <CardDescription>
-          Start a new game and invite friends to play
+          Crea una nuova partita e invita amici a giocare
         </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
@@ -61,11 +61,11 @@ const CreateGame = ({ onCreateGame }: CreateGameProps) => {
           <div className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="nickname" className="text-sm font-medium">
-                Your Nickname
+                Il Tuo Nickname
               </label>
               <Input
                 id="nickname"
-                placeholder="Enter your nickname"
+                placeholder="Inserisci il tuo nickname"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
                 required
@@ -81,7 +81,7 @@ const CreateGame = ({ onCreateGame }: CreateGameProps) => {
             className="game-button-primary w-full"
             disabled={isCreating || !nickname.trim()}
           >
-            {isCreating ? "Creating..." : "Create Game"}
+            {isCreating ? "Creazione..." : "Crea Partita"}
           </Button>
         </CardFooter>
       </form>
