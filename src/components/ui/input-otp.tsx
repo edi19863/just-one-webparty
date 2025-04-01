@@ -49,7 +49,23 @@ const InputOTPSlot = React.forwardRef<
     )
   }
   
-  const slot = inputOTPContext.slots[index] || {}
+  const slot = inputOTPContext.slots[index]
+  
+  // If slot is undefined, return an empty slot
+  if (!slot) {
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          "relative flex h-10 w-10 items-center justify-center border-y border-r border-input text-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md",
+          className
+        )}
+        {...props}
+      />
+    )
+  }
+  
+  // Now we can safely destructure the slot properties
   const { char, hasFakeCaret, isActive } = slot
 
   return (

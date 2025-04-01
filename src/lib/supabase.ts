@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import type { Game } from '@/types/game';
 
@@ -117,8 +116,10 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
   // Clean up existing channels first
   const existingChannels = supabase.getChannels();
   for (const channel of existingChannels) {
-    if (channel.config?.name && channel.config.name.includes(gameId)) {
-      console.log(`Removing existing channel: ${channel.config.name}`);
+    // Use type assertion instead of accessing config directly
+    const channelInfo = channel as any;
+    if (channelInfo?.topic && channelInfo.topic.includes(gameId)) {
+      console.log(`Removing existing channel: ${channelInfo.topic}`);
       supabase.removeChannel(channel);
     }
   }
