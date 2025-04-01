@@ -67,21 +67,19 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
                 Game Code
               </label>
               <InputOTP 
-                maxLength={5} 
-                value={gameCode} 
+                maxLength={5}
+                value={gameCode}
                 onChange={setGameCode}
-                render={({ slots }) => (
-                  <InputOTPGroup>
-                    {slots.map((slot, index) => (
-                      <InputOTPSlot 
-                        key={index} 
-                        index={index} 
-                        className="uppercase" 
-                      />
-                    ))}
-                  </InputOTPGroup>
-                )}
-              />
+                className="flex justify-center"
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} className="uppercase" />
+                  <InputOTPSlot index={1} className="uppercase" />
+                  <InputOTPSlot index={2} className="uppercase" />
+                  <InputOTPSlot index={3} className="uppercase" />
+                  <InputOTPSlot index={4} className="uppercase" />
+                </InputOTPGroup>
+              </InputOTP>
             </div>
             <div className="space-y-2">
               <label htmlFor="nickname" className="text-sm font-medium">
