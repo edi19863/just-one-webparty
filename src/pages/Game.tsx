@@ -12,6 +12,7 @@ const Game = () => {
   const { id: gameId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
+  const [loadAttempts, setLoadAttempts] = useState(0);
   
   // Get the stored player ID for this specific game
   const storedPlayerId = gameId ? localStorage.getItem(`player_id_${gameId}`) : null;
@@ -48,27 +49,63 @@ const Game = () => {
     }
   }, [gameId, playerId]);
   
-  // Handle errors
+  // Handle errors - with improved error handling to prevent loops
   useEffect(() => {
     if (error && initialLoadComplete) {
       console.error("Game error:", error);
-      toast.error("Error loading game");
-      navigate("/", { replace: true });
+      
+      // Clear localStorage for this game to prevent loop
+      if (gameId) {
+        console.log(`Clearing localStorage for game ${gameId} due to error`);
+        localStorage.removeItem(`player_id_${gameId}`);
+        localStorage.removeItem("current_game_id");
+      }
+      
+      toast.error("Error loading game - returning to home");
+      
+      // Give a brief moment to see the toast before navigating
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 1500);
     }
-  }, [error, navigate, initialLoadComplete]);
+  }, [error, navigate, initialLoadComplete, gameId]);
   
   // Check if player exists in the game
   useEffect(() => {
     if (initialLoadComplete && !loading && gameState && playerId && !currentPlayer) {
       console.log("Player not found in game:", playerId);
-      toast.error("You're no longer part of this game");
+      
+      // Clear localStorage for this game
       if (gameId) {
         localStorage.removeItem(`player_id_${gameId}`);
       }
       localStorage.removeItem("current_game_id");
+      
+      toast.error("You're no longer part of this game");
       navigate("/", { replace: true });
     }
   }, [loading, gameState, playerId, currentPlayer, gameId, navigate, initialLoadComplete]);
+
+  // Add an additional safeguard for repeated load failures
+  useEffect(() => {
+    if (loading) {
+      setLoadAttempts(prev => prev + 1);
+    }
+    
+    // If we've tried loading 3+ times and still loading, assume there's an issue
+    if (loadAttempts >= 3 && loading) {
+      console.error("Too many load attempts, assuming game is inaccessible");
+      
+      // Clear localStorage to break potential loops
+      if (gameId) {
+        localStorage.removeItem(`player_id_${gameId}`);
+      }
+      localStorage.removeItem("current_game_id");
+      
+      toast.error("Unable to load game after multiple attempts");
+      navigate("/", { replace: true });
+    }
+  }, [loading, loadAttempts, gameId, navigate]);
   
   const handleLeaveGame = () => {
     if (gameId) {
@@ -95,7 +132,14 @@ const Game = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-game-error mb-4">Game not found</h2>
           <button 
-            onClick={() => navigate("/")} 
+            onClick={() => {
+              // Clear localStorage before returning to home
+              if (gameId) {
+                localStorage.removeItem(`player_id_${gameId}`);
+              }
+              localStorage.removeItem("current_game_id");
+              navigate("/");
+            }} 
             className="game-button-primary"
           >
             Back to Home
@@ -111,7 +155,14 @@ const Game = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-game-error mb-4">You're not part of this game</h2>
           <button 
-            onClick={() => navigate("/")} 
+            onClick={() => {
+              // Clear localStorage before returning to home
+              if (gameId) {
+                localStorage.removeItem(`player_id_${gameId}`);
+              }
+              localStorage.removeItem("current_game_id");
+              navigate("/");
+            }} 
             className="game-button-primary"
           >
             Back to Home

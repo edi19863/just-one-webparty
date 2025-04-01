@@ -22,12 +22,25 @@ const Index = () => {
           
           if (savedPlayerId) {
             console.log(`Found existing game: ${savedGameId} with player: ${savedPlayerId}`);
-            navigate(`/game/${savedGameId}`);
+            
+            // Try to check if the game exists before redirecting
+            try {
+              // We'll just check if navigation should happen - the actual game loading happens in Game.tsx
+              navigate(`/game/${savedGameId}`);
+            } catch (err) {
+              console.error("Error navigating to saved game:", err);
+              // If there's an error, clear the storage to prevent loops
+              localStorage.removeItem(`player_id_${savedGameId}`);
+              localStorage.removeItem("current_game_id");
+              toast.error("Couldn't load saved game - starting fresh");
+            }
             return;
           }
         }
       } catch (err) {
         console.error("Error checking for existing game:", err);
+        // Clear potentially corrupted storage
+        localStorage.removeItem("current_game_id");
       } finally {
         setCheckingExistingGame(false);
       }
