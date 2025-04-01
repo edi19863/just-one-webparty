@@ -67,9 +67,14 @@ export default {
 					'primary': '#6366F1',
 					'secondary': '#10B981',
 					'accent': '#F59E0B',
-					'background': '#F3F4F6',
-					'text': '#111827',
+					'background': '#121212', // Changed to dark
+					'card': '#1e1e1e', // New dark card background
+					'text': '#F3F4F6', // Changed text color for dark mode
+					'muted': '#6b7280', // Muted text for dark mode
 					'error': '#EF4444',
+					'success': '#22c55e',
+					'border': '#2d2d2d', // Dark border color
+					'highlight': '#4338ca', // Highlight color for dark mode
 				}
 			},
 			borderRadius: {
@@ -105,6 +110,10 @@ export default {
 				'slide-in': {
 					'0%': { transform: 'translateX(-20px)', opacity: '0' },
 					'100%': { transform: 'translateX(0)', opacity: '1' },
+				},
+				'glow': {
+					'0%, 100%': { boxShadow: '0 0 5px rgba(99, 102, 241, 0.6)' },
+					'50%': { boxShadow: '0 0 20px rgba(99, 102, 241, 0.9)' },
 				}
 			},
 			animation: {
@@ -113,6 +122,7 @@ export default {
 				'pulse-light': 'pulse-light 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
 				'fade-in': 'fade-in 0.5s ease-out',
 				'slide-in': 'slide-in 0.3s ease-out',
+				'glow': 'glow 2s ease-in-out infinite'
 			},
 			fontFamily: {
 				game: ['Poppins', 'sans-serif'],

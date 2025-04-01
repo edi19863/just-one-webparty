@@ -1,5 +1,6 @@
 
 import { Game, GameStatus, Player, Round, Clue } from "@/types/game";
+import { checkWordSimilarity } from "./wordUtils";
 
 // Generate a random 5-character alphanumeric code
 export const generateGameCode = (): string => {
@@ -29,13 +30,13 @@ export const createNewGame = (hostId: string, hostNickname: string): Game => {
   return {
     id: generatePlayerId(),
     code: code,
-    host_id: hostId, // Changed from hostId to host_id
+    host_id: hostId,
     status: GameStatus.LOBBY,
     players: [host],
-    current_round: null, // Changed from currentRound to current_round
+    current_round: null,
     rounds: [],
-    created_at: new Date().toISOString(), // Changed from createdAt to created_at
-    updated_at: new Date().toISOString()  // Changed from updatedAt to updated_at
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
   };
 };
 
@@ -52,7 +53,7 @@ export const addPlayerToGame = (game: Game, nickname: string): { game: Game, pla
   const updatedGame = {
     ...game,
     players: [...game.players, player],
-    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
+    updated_at: new Date().toISOString()
   };
 
   return { game: updatedGame, playerId };
@@ -60,14 +61,16 @@ export const addPlayerToGame = (game: Game, nickname: string): { game: Game, pla
 
 // Start a new round
 export const startNewRound = (game: Game): Game => {
-  // Words for the game - in a real app, you'd have a larger list or fetch from an API
+  // Words for the game in Italian
   const words = [
-    "APPLE", "BEACH", "CHAIR", "DANCE", "EAGLE", "FLOWER", "GUITAR", "HONEY", 
-    "ISLAND", "JUNGLE", "KETTLE", "LEMON", "MOUNTAIN", "NOVEL", "OCEAN", 
-    "PIANO", "QUILT", "RIVER", "SUNSET", "TIGER", "UMBRELLA", "VIOLIN", 
-    "WINDOW", "XYLOPHONE", "YELLOW", "ZEBRA", "BALLOON", "CAMERA", "DOLPHIN",
-    "FOREST", "GARDEN", "HAMMER", "JACKET", "KITCHEN", "LAPTOP", "MAGNET",
-    "NEEDLE", "ORANGE", "PENCIL", "ROCKET", "SANDWICH", "TURTLE", "VOLCANO"
+    "MELA", "SPIAGGIA", "SEDIA", "DANZA", "AQUILA", "FIORE", "CHITARRA", "MIELE", 
+    "ISOLA", "GIUNGLA", "BOLLITORE", "LIMONE", "MONTAGNA", "ROMANZO", "OCEANO", 
+    "PIANOFORTE", "TRAPUNTA", "FIUME", "TRAMONTO", "TIGRE", "OMBRELLO", "VIOLINO", 
+    "FINESTRA", "XILOFONO", "GIALLO", "ZEBRA", "PALLONCINO", "MACCHINA", "DELFINO",
+    "FORESTA", "GIARDINO", "MARTELLO", "GIACCA", "CUCINA", "COMPUTER", "MAGNETE",
+    "AGO", "ARANCIA", "MATITA", "RAZZO", "PANINO", "TARTARUGA", "VULCANO", 
+    "PIZZA", "GELATO", "CAFFÈ", "PASTA", "VINO", "FORMAGGIO", "BICICLETTA", 
+    "CINEMA", "TEATRO", "MUSICA", "LIBRO", "TAVOLO", "PENNA", "CAMICIA", "SCARPA"
   ];
   
   // Determine the guesser - rotate through players
@@ -109,15 +112,15 @@ export const startNewRound = (game: Game): Game => {
     ...game,
     players: updatedPlayers,
     status: GameStatus.SUBMITTING_CLUES,
-    current_round: newRound, // Changed from currentRound to current_round
+    current_round: newRound,
     rounds: [...game.rounds, newRound],
-    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
+    updated_at: new Date().toISOString()
   };
 };
 
 // Add a clue from a player
 export const addClue = (game: Game, playerId: string, word: string): Game => {
-  if (!game.current_round) return game; // Changed from currentRound to current_round
+  if (!game.current_round) return game;
   
   const player = game.players.find(p => p.id === playerId);
   if (!player) return game;
@@ -130,8 +133,8 @@ export const addClue = (game: Game, playerId: string, word: string): Game => {
   };
   
   const updatedRound = {
-    ...game.current_round, // Changed from currentRound to current_round
-    clues: [...game.current_round.clues, clue] // Changed from currentRound to current_round
+    ...game.current_round,
+    clues: [...game.current_round.clues, clue]
   };
   
   // Check if all non-guessers have submitted clues
@@ -148,20 +151,20 @@ export const addClue = (game: Game, playerId: string, word: string): Game => {
   return {
     ...game,
     status: updatedStatus,
-    current_round: updatedRound, // Changed from currentRound to current_round
+    current_round: updatedRound,
     rounds: updatedRounds,
-    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
+    updated_at: new Date().toISOString()
   };
 };
 
-// Filter duplicate clues
+// Filter duplicate clues and clues with similar roots/endings
 export const filterClues = (game: Game): Game => {
-  if (!game.current_round) return game; // Changed from currentRound to current_round
+  if (!game.current_round) return game;
   
   // Group clues by lowercase word
   const clueGroups = new Map<string, Clue[]>();
   
-  game.current_round.clues.forEach(clue => { // Changed from currentRound to current_round
+  game.current_round.clues.forEach(clue => {
     const lowerWord = clue.word.toLowerCase();
     if (!clueGroups.has(lowerWord)) {
       clueGroups.set(lowerWord, []);
@@ -169,17 +172,23 @@ export const filterClues = (game: Game): Game => {
     clueGroups.get(lowerWord)?.push(clue);
   });
   
-  // Mark duplicates as filtered
-  const filteredClues = game.current_round.clues.map(clue => { // Changed from currentRound to current_round
+  // Mark duplicates and similar words as filtered
+  const filteredClues = game.current_round.clues.map(clue => {
     const group = clueGroups.get(clue.word.toLowerCase()) || [];
+    
+    // Check if it's a duplicate or matches the secret word or has similar root/ending to secret word
+    const isDuplicate = group.length > 1;
+    const matchesSecretWord = clue.word.toLowerCase() === game.current_round!.secretWord.toLowerCase();
+    const hasSimilarRootOrEnding = checkWordSimilarity(clue.word, game.current_round!.secretWord);
+    
     return {
       ...clue,
-      filtered: group.length > 1 || clue.word.toLowerCase() === game.current_round!.secretWord.toLowerCase() // Changed from currentRound to current_round
+      filtered: isDuplicate || matchesSecretWord || hasSimilarRootOrEnding
     };
   });
   
   const updatedRound = {
-    ...game.current_round, // Changed from currentRound to current_round
+    ...game.current_round,
     clues: filteredClues
   };
   
@@ -191,23 +200,23 @@ export const filterClues = (game: Game): Game => {
   return {
     ...game,
     status: GameStatus.GUESSING,
-    current_round: updatedRound, // Changed from currentRound to current_round
+    current_round: updatedRound,
     rounds: updatedRounds,
-    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
+    updated_at: new Date().toISOString()
   };
 };
 
 // Submit a guess
 export const submitGuess = (game: Game, guess: string): Game => {
-  if (!game.current_round) return game; // Changed from currentRound to current_round
+  if (!game.current_round) return game;
   
   const normalizedGuess = guess.toLowerCase().trim();
-  const normalizedSecretWord = game.current_round.secretWord.toLowerCase(); // Changed from currentRound to current_round
+  const normalizedSecretWord = game.current_round.secretWord.toLowerCase();
   
   const isCorrect = normalizedGuess === normalizedSecretWord;
   
   const updatedRound = {
-    ...game.current_round, // Changed from currentRound to current_round
+    ...game.current_round,
     guess,
     correct: isCorrect,
     completed: true
@@ -221,9 +230,9 @@ export const submitGuess = (game: Game, guess: string): Game => {
   return {
     ...game,
     status: GameStatus.ROUND_RESULT,
-    current_round: updatedRound, // Changed from currentRound to current_round
+    current_round: updatedRound,
     rounds: updatedRounds,
-    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
+    updated_at: new Date().toISOString()
   };
 };
 
@@ -232,8 +241,8 @@ export const removePlayerFromGame = (game: Game, playerId: string): Game => {
   const updatedPlayers = game.players.filter(p => p.id !== playerId);
   
   // If the host is leaving, assign a new host
-  let updatedHostId = game.host_id; // Changed from hostId to host_id
-  if (playerId === game.host_id) { // Changed from hostId to host_id
+  let updatedHostId = game.host_id;
+  if (playerId === game.host_id) {
     if (updatedPlayers.length > 0) {
       const newHost = updatedPlayers[0];
       updatedHostId = newHost.id;
@@ -246,8 +255,8 @@ export const removePlayerFromGame = (game: Game, playerId: string): Game => {
   
   return {
     ...game,
-    host_id: updatedHostId, // Changed from hostId to host_id
+    host_id: updatedHostId,
     players: updatedPlayers,
-    updated_at: new Date().toISOString() // Changed from updatedAt to updated_at
+    updated_at: new Date().toISOString()
   };
 };

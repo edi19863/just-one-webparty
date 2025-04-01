@@ -35,7 +35,7 @@ const Game = () => {
   // Handle initial load
   useEffect(() => {
     if (!initialLoadComplete && !loading) {
-      console.log("Initial game load complete:", gameState?.id);
+      console.log("Caricamento iniziale del gioco completato:", gameState?.id);
       setInitialLoadComplete(true);
     }
   }, [loading, initialLoadComplete, gameState]);
@@ -48,7 +48,7 @@ const Game = () => {
       loadInterval = window.setInterval(() => {
         setLoadAttempts(prev => {
           const newCount = prev + 1;
-          console.log(`Loading attempt ${newCount}...`);
+          console.log(`Tentativo di caricamento ${newCount}...`);
           return newCount;
         });
       }, 1000);
@@ -64,7 +64,7 @@ const Game = () => {
   // Save player ID to localStorage whenever it changes
   useEffect(() => {
     if (gameId && playerId) {
-      console.log(`Saving player ID ${playerId} for game ${gameId}`);
+      console.log(`Salvataggio ID giocatore ${playerId} per il gioco ${gameId}`);
       localStorage.setItem(`player_id_${gameId}`, playerId);
       localStorage.setItem("current_game_id", gameId);
     }
@@ -73,16 +73,16 @@ const Game = () => {
   // Handle errors
   useEffect(() => {
     if (error && initialLoadComplete) {
-      console.error("Game error:", error);
+      console.error("Errore di gioco:", error);
       
       // Clear localStorage for this game to prevent loop
       if (gameId) {
-        console.log(`Clearing localStorage for game ${gameId} due to error`);
+        console.log(`Pulizia localStorage per il gioco ${gameId} a causa di un errore`);
         localStorage.removeItem(`player_id_${gameId}`);
         localStorage.removeItem("current_game_id");
       }
       
-      toast.error("Error loading game - returning to home");
+      toast.error("Errore nel caricamento del gioco - ritorno alla home");
       
       // Give a brief moment to see the toast before navigating
       setTimeout(() => {
@@ -94,7 +94,7 @@ const Game = () => {
   // Check if player exists in the game
   useEffect(() => {
     if (initialLoadComplete && !loading && gameState && playerId && !currentPlayer) {
-      console.log("Player not found in game:", playerId);
+      console.log("Giocatore non trovato nel gioco:", playerId);
       
       // Clear localStorage for this game
       if (gameId) {
@@ -102,7 +102,7 @@ const Game = () => {
       }
       localStorage.removeItem("current_game_id");
       
-      toast.error("You're no longer part of this game");
+      toast.error("Non fai più parte di questo gioco");
       navigate("/", { replace: true });
     }
   }, [loading, gameState, playerId, currentPlayer, gameId, navigate, initialLoadComplete]);
@@ -110,7 +110,7 @@ const Game = () => {
   // Handle too many load attempts
   useEffect(() => {
     if (loadAttempts >= 10 && loading) {
-      console.error("Too many load attempts, assuming game is inaccessible");
+      console.error("Troppi tentativi di caricamento, il gioco sembra inaccessibile");
       
       // Clear localStorage to break potential loops
       if (gameId) {
@@ -118,7 +118,7 @@ const Game = () => {
       }
       localStorage.removeItem("current_game_id");
       
-      toast.error("Unable to load game after multiple attempts");
+      toast.error("Impossibile caricare il gioco dopo numerosi tentativi");
       setTimeout(() => {
         navigate("/", { replace: true });
       }, 1000);
@@ -138,7 +138,7 @@ const Game = () => {
     return (
       <div className="min-h-screen bg-game-background flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold animate-pulse-light">Loading game... ({loadAttempts})</h2>
+          <h2 className="text-2xl font-bold animate-pulse-light">Caricamento gioco... ({loadAttempts})</h2>
         </div>
       </div>
     );
@@ -148,7 +148,7 @@ const Game = () => {
     return (
       <div className="min-h-screen bg-game-background flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-game-error mb-4">Game not found</h2>
+          <h2 className="text-2xl font-bold text-game-error mb-4">Gioco non trovato</h2>
           <button 
             onClick={() => {
               // Clear localStorage before returning to home
@@ -160,7 +160,7 @@ const Game = () => {
             }} 
             className="game-button-primary"
           >
-            Back to Home
+            Torna alla Home
           </button>
         </div>
       </div>
@@ -171,7 +171,7 @@ const Game = () => {
     return (
       <div className="min-h-screen bg-game-background flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-game-error mb-4">You're not part of this game</h2>
+          <h2 className="text-2xl font-bold text-game-error mb-4">Non fai parte di questo gioco</h2>
           <button 
             onClick={() => {
               // Clear localStorage before returning to home
@@ -183,7 +183,7 @@ const Game = () => {
             }} 
             className="game-button-primary"
           >
-            Back to Home
+            Torna alla Home
           </button>
         </div>
       </div>

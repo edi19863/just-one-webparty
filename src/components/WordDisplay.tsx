@@ -8,10 +8,10 @@ interface WordDisplayProps {
 
 const WordDisplay = ({ word, isGuesser = false }: WordDisplayProps) => {
   return (
-    <Card className="bg-white mb-6">
+    <Card className="bg-game-card border-game-border mb-6">
       <CardContent className="flex flex-col items-center justify-center pt-6 pb-6">
         <h3 className="font-medium text-lg mb-2">
-          {isGuesser ? "You are the guesser for this round" : "The secret word is:"}
+          {isGuesser ? "Sei l'indovino di questo turno" : "La parola segreta è:"}
         </h3>
         
         {isGuesser ? (
@@ -25,12 +25,12 @@ const WordDisplay = ({ word, isGuesser = false }: WordDisplayProps) => {
         )}
         
         {isGuesser ? (
-          <p className="text-sm text-gray-600 mt-3">
-            Other players are giving you clues
+          <p className="text-sm text-game-muted mt-3">
+            Gli altri giocatori ti stanno dando indizi
           </p>
         ) : (
-          <p className="text-sm text-gray-600 mt-3">
-            Give a one-word clue to help the guesser
+          <p className="text-sm text-game-muted mt-3">
+            Dai un indizio di una parola per aiutare l'indovino
           </p>
         )}
       </CardContent>

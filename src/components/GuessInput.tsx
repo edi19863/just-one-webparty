@@ -22,39 +22,42 @@ const GuessInput = ({ onSubmitGuess, clues }: GuessInputProps) => {
   };
   
   return (
-    <Card className="bg-white">
+    <Card className="bg-game-card border-game-border">
       <CardHeader>
-        <CardTitle>Make Your Guess</CardTitle>
+        <CardTitle>Fai la Tua Ipotesi</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="font-medium mb-3">Clues from other players:</h4>
+          <div className="bg-gray-800 p-4 rounded-lg border border-game-border">
+            <h4 className="font-medium mb-3">Indizi dagli altri giocatori:</h4>
             {validClues.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {validClues.map((clue) => (
                   <div 
                     key={clue.playerId} 
-                    className="bg-white px-3 py-1 rounded-full border border-gray-200 shadow-sm"
+                    className="bg-gray-700 px-3 py-1 rounded-full border border-gray-600 shadow-sm"
                   >
                     {clue.word}
+                    <span className="text-xs text-game-muted ml-1">
+                      ({clue.playerName})
+                    </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-gray-500 italic">
-                No valid clues were submitted.
+              <p className="text-game-muted italic">
+                Nessun indizio valido è stato inviato.
               </p>
             )}
           </div>
           
           <div className="space-y-2">
             <label htmlFor="guess" className="text-sm font-medium">
-              Your Guess
+              La Tua Ipotesi
             </label>
             <Input
               id="guess"
-              placeholder="What's the secret word?"
+              placeholder="Qual è la parola segreta?"
               value={guess}
               onChange={(e) => setGuess(e.target.value)}
               className="game-input"
@@ -68,7 +71,7 @@ const GuessInput = ({ onSubmitGuess, clues }: GuessInputProps) => {
           className="game-button-accent w-full"
           disabled={!guess.trim()}
         >
-          Submit Guess
+          Invia Ipotesi
         </Button>
       </CardFooter>
     </Card>
