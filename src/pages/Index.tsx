@@ -26,6 +26,9 @@ const Index = () => {
             // Just redirect to the game page
             navigate(`/game/${savedGameId}`);
             return;
+          } else {
+            // Player ID not found, clear game ID
+            localStorage.removeItem("current_game_id");
           }
         }
       } catch (err) {
@@ -43,7 +46,16 @@ const Index = () => {
   const handleCreateGame = async (nickname: string) => {
     try {
       console.log("Creating new game with nickname:", nickname);
-      return await createGame(nickname);
+      const result = await createGame(nickname);
+      
+      if (result) {
+        console.log(`Game created with ID: ${result.gameId}, code: ${result.gameCode}`);
+        return result;
+      } else {
+        console.error("Failed to create game - no result returned");
+        toast.error("Failed to create game. Please try again.");
+      }
+      return null;
     } catch (err) {
       console.error("Error creating game:", err);
       toast.error("Failed to create game. Please try again.");
@@ -54,7 +66,13 @@ const Index = () => {
   const handleJoinGame = async (code: string, nickname: string) => {
     try {
       console.log("Joining game with code:", code);
-      return await joinGame(code, nickname);
+      const result = await joinGame(code, nickname);
+      
+      if (result) {
+        console.log(`Joined game with ID: ${result.gameId}`);
+        return result;
+      }
+      return null;
     } catch (err) {
       console.error("Error joining game:", err);
       toast.error("Failed to join game. Please check your code and try again.");

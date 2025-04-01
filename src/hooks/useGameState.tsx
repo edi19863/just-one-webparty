@@ -31,6 +31,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
   const loadGameState = useCallback(async (gameId: string) => {
     setLoading(true);
     try {
+      console.log(`Loading game with ID: ${gameId}`);
       const game = await getGameById(gameId);
       if (game) {
         console.log('Game loaded:', game);
@@ -82,9 +83,12 @@ export const useGameState = (options?: UseGameStateOptions) => {
   // Join an existing game
   const joinGame = useCallback(async (code: string, nickname: string) => {
     try {
+      console.log(`Attempting to join game with code: ${code}`);
       // Find game by code in Supabase
       const game = await getGameByCode(code);
+      
       if (!game) {
+        console.error('Game not found with code:', code);
         setError('Game not found');
         toast({
           title: 'Error',
@@ -93,6 +97,8 @@ export const useGameState = (options?: UseGameStateOptions) => {
         });
         return null;
       }
+      
+      console.log('Found game:', game);
       
       // Add player to game
       const { game: updatedGame, playerId: newPlayerId } = gameUtils.addPlayerToGame(game, nickname);
@@ -111,6 +117,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
         
         return { gameId: savedGame.id, playerId: newPlayerId };
       } else {
+        console.error('Failed to update game after joining');
         toast({
           title: 'Error',
           description: 'Failed to join game',

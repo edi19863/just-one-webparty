@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 interface JoinGameProps {
   onJoinGame: (code: string, nickname: string) => Promise<{ gameId: string; playerId: string; } | null>;
@@ -22,7 +23,9 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
     
     setIsJoining(true);
     try {
+      console.log("Joining game with code:", gameCode.trim());
       const result = await onJoinGame(gameCode.trim(), nickname.trim());
+      
       if (result) {
         console.log("Successfully joined game:", result.gameId);
         
@@ -48,11 +51,6 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
     }
   };
 
-  // Auto-format game code to uppercase
-  const handleGameCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setGameCode(e.target.value.toUpperCase());
-  };
-
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
@@ -68,14 +66,17 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
               <label htmlFor="gameCode" className="text-sm font-medium">
                 Game Code
               </label>
-              <Input
-                id="gameCode"
-                placeholder="Enter 5-character code"
-                value={gameCode}
-                onChange={handleGameCodeChange}
-                required
-                className="game-input text-center uppercase tracking-wider"
-                maxLength={5}
+              <InputOTP 
+                maxLength={5} 
+                value={gameCode} 
+                onChange={setGameCode}
+                render={({ slots }) => (
+                  <InputOTPGroup>
+                    {slots.map((slot, index) => (
+                      <InputOTPSlot key={index} index={index} className="uppercase" />
+                    ))}
+                  </InputOTPGroup>
+                )}
               />
             </div>
             <div className="space-y-2">
@@ -98,7 +99,7 @@ const JoinGame = ({ onJoinGame }: JoinGameProps) => {
           <Button 
             type="submit" 
             className="game-button-secondary w-full"
-            disabled={isJoining || !gameCode.trim() || !nickname.trim()}
+            disabled={isJoining || gameCode.length < 5 || !nickname.trim()}
           >
             {isJoining ? "Joining..." : "Join Game"}
           </Button>

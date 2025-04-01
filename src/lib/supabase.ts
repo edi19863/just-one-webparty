@@ -117,8 +117,8 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
   // Clean up existing channels first
   const existingChannels = supabase.getChannels();
   for (const channel of existingChannels) {
-    if (channel.toURI().includes(gameId)) {
-      console.log(`Removing existing channel: ${channel.toURI()}`);
+    if (channel.config?.name && channel.config.name.includes(gameId)) {
+      console.log(`Removing existing channel: ${channel.config.name}`);
       supabase.removeChannel(channel);
     }
   }
