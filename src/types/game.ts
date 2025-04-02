@@ -34,7 +34,7 @@ export interface Game {
   code: string;
   host_id: string;
   status: GameStatus;
-  mode: GameMode;
+  mode?: GameMode; // Make mode optional
   players: Player[];
   current_round: Round | null;
   rounds: Round[];

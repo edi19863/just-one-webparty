@@ -1,3 +1,4 @@
+
 import { Game, GameStatus, Player, Round, Clue, GameMode, IRLStatus } from "@/types/game";
 import { checkWordSimilarity } from "./wordUtils";
 
@@ -31,7 +32,7 @@ export const createNewGame = (hostId: string, hostNickname: string, mode: GameMo
     code: code,
     host_id: hostId,
     status: GameStatus.LOBBY,
-    mode: mode,
+    mode: mode, // This won't be stored in the database, but used client-side
     players: [host],
     current_round: null,
     rounds: [],

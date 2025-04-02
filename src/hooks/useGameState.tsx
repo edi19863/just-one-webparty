@@ -26,6 +26,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
   const { toast } = useToast();
   const supabaseChannelRef = useRef<RealtimeChannel | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
+  const gameModeRef = useRef<GameMode>(GameMode.ONLINE);
 
   // Load game from Supabase
   const loadGameState = useCallback(async (gameId: string) => {
@@ -35,6 +36,15 @@ export const useGameState = (options?: UseGameStateOptions) => {
       const game = await getGameById(gameId);
       if (game) {
         console.log('Game loaded:', game);
+        // If we have a saved mode in localStorage, use it
+        const savedMode = localStorage.getItem(`game_mode_${gameId}`);
+        if (savedMode && (savedMode === GameMode.ONLINE || savedMode === GameMode.IRL)) {
+          game.mode = savedMode as GameMode;
+          gameModeRef.current = savedMode as GameMode;
+        } else {
+          game.mode = GameMode.ONLINE;
+          gameModeRef.current = GameMode.ONLINE;
+        }
         setGameState(game);
         lastUpdateTimeRef.current = Date.now();
         return game;
@@ -57,12 +67,19 @@ export const useGameState = (options?: UseGameStateOptions) => {
     const id = gameUtils.generatePlayerId();
     setPlayerId(id);
     
+    // Save the selected mode
+    gameModeRef.current = mode;
+    
     const newGame = gameUtils.createNewGame(id, nickname, mode);
     
     // Save game to Supabase
     const savedGame = await createGameInDb(newGame);
     if (savedGame) {
       console.log('Game created:', savedGame);
+      
+      // Store the game mode in localStorage
+      localStorage.setItem(`game_mode_${savedGame.id}`, mode);
+      
       setGameState(savedGame);
       lastUpdateTimeRef.current = Date.now();
       
@@ -101,6 +118,16 @@ export const useGameState = (options?: UseGameStateOptions) => {
       }
       
       console.log('Found game:', game);
+      
+      // Check if we have a saved mode in localStorage
+      const savedMode = localStorage.getItem(`game_mode_${game.id}`);
+      if (savedMode && (savedMode === GameMode.ONLINE || savedMode === GameMode.IRL)) {
+        game.mode = savedMode as GameMode;
+        gameModeRef.current = savedMode as GameMode;
+      } else {
+        game.mode = GameMode.ONLINE;
+        gameModeRef.current = GameMode.ONLINE;
+      }
       
       // Add player to game
       const { game: updatedGame, playerId: newPlayerId } = gameUtils.addPlayerToGame(game, nickname);
@@ -310,6 +337,8 @@ export const useGameState = (options?: UseGameStateOptions) => {
             
             if (updatedAt > currentUpdatedAt) {
               console.log('Game updated via polling:', updatedGame);
+              // Preserve the game mode
+              updatedGame.mode = gameModeRef.current;
               setGameState(updatedGame);
               lastUpdateTimeRef.current = Date.now();
             }
@@ -339,6 +368,8 @@ export const useGameState = (options?: UseGameStateOptions) => {
         setGameState((currentGameState) => {
           // Only update if the game has been updated more recently
           if (!currentGameState || new Date(updatedGame.updated_at) > new Date(currentGameState.updated_at)) {
+            // Preserve the game mode
+            updatedGame.mode = gameModeRef.current;
             lastUpdateTimeRef.current = Date.now();
             return updatedGame;
           }
