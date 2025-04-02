@@ -23,6 +23,30 @@ const IRLGuesserView = ({ round, status, onUpdateGuessResult }: IRLGuesserViewPr
     }
   };
   
+  const renderGuessButtons = () => {
+    return (
+      <div className="grid grid-cols-2 gap-4 mt-6">
+        <Button
+          className="p-6 h-auto flex flex-col items-center bg-green-900 hover:bg-green-800 text-green-300 rounded-xl"
+          onClick={() => handleSubmitResult(true)}
+          disabled={submitting}
+        >
+          <CheckCircle size={48} className="mb-2" />
+          <span className="text-xl font-bold">INDOVINATO!</span>
+        </Button>
+        
+        <Button
+          className="p-6 h-auto flex flex-col items-center bg-red-900 hover:bg-red-800 text-red-300 rounded-xl"
+          onClick={() => handleSubmitResult(false)}
+          disabled={submitting}
+        >
+          <XCircle size={48} className="mb-2" />
+          <span className="text-xl font-bold">PERSO</span>
+        </Button>
+      </div>
+    );
+  };
+  
   const renderContent = () => {
     switch (status) {
       case GameStatus.SUBMITTING_CLUES:
@@ -62,25 +86,7 @@ const IRLGuesserView = ({ round, status, onUpdateGuessResult }: IRLGuesserViewPr
               </p>
             </div>
             
-            <div className="grid grid-cols-2 gap-4">
-              <Button
-                className="p-6 h-auto flex flex-col items-center bg-green-900 hover:bg-green-800 text-green-300 rounded-xl"
-                onClick={() => handleSubmitResult(true)}
-                disabled={submitting}
-              >
-                <CheckCircle size={48} className="mb-2" />
-                <span className="text-xl font-bold">INDOVINATO!</span>
-              </Button>
-              
-              <Button
-                className="p-6 h-auto flex flex-col items-center bg-red-900 hover:bg-red-800 text-red-300 rounded-xl"
-                onClick={() => handleSubmitResult(false)}
-                disabled={submitting}
-              >
-                <XCircle size={48} className="mb-2" />
-                <span className="text-xl font-bold">PERSO</span>
-              </Button>
-            </div>
+            {renderGuessButtons()}
           </div>
         );
         

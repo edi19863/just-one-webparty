@@ -70,7 +70,7 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
   
   // Handle drawing
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!context || hasSubmitted) return;
+    if (!context) return;
     
     setIsDrawing(true);
     context.beginPath();
@@ -93,7 +93,7 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
   };
   
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !context || hasSubmitted) return;
+    if (!isDrawing || !context) return;
     
     // Prevent scrolling when drawing on mobile
     if ('touches' in e) {
@@ -151,52 +151,49 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
               <p className="mt-2 text-sm">Non mostrare il tuo schermo all'indovino! ({round.guesserName})</p>
             </div>
             
+            <div className="text-center">
+              <p className="mb-2">Scrivi il tuo indizio sulla lavagna:</p>
+              <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
+                <canvas
+                  ref={canvasRef}
+                  className="touch-none w-full h-64"
+                  onMouseDown={startDrawing}
+                  onMouseMove={draw}
+                  onMouseUp={stopDrawing}
+                  onMouseLeave={stopDrawing}
+                  onTouchStart={startDrawing}
+                  onTouchMove={draw}
+                  onTouchEnd={stopDrawing}
+                />
+              </div>
+            </div>
+            
             {hasSubmitted ? (
-              <div className="text-center py-6 space-y-4">
-                <CheckCircle size={48} className="mx-auto text-green-500" />
-                <p className="text-lg font-medium">Hai scritto il tuo indizio</p>
-                <p>Attendi che tutti gli altri giocatori scrivano i loro indizi</p>
+              <div className="flex items-center justify-center p-3 bg-green-800/20 rounded-md">
+                <CheckCircle size={20} className="mr-2 text-green-500" />
+                <p>Indizio registrato. Attendi gli altri giocatori.</p>
               </div>
             ) : (
-              <>
-                <div className="text-center">
-                  <p className="mb-2">Scrivi il tuo indizio sulla lavagna:</p>
-                  <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
-                    <canvas
-                      ref={canvasRef}
-                      className="touch-none w-full h-64"
-                      onMouseDown={startDrawing}
-                      onMouseMove={draw}
-                      onMouseUp={stopDrawing}
-                      onMouseLeave={stopDrawing}
-                      onTouchStart={startDrawing}
-                      onTouchMove={draw}
-                      onTouchEnd={stopDrawing}
-                    />
-                  </div>
-                </div>
+              <div className="grid grid-cols-2 gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex items-center justify-center"
+                  onClick={clearCanvas}
+                >
+                  <Eraser className="mr-2 h-4 w-4" />
+                  Cancella
+                </Button>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="flex items-center justify-center"
-                    onClick={clearCanvas}
-                  >
-                    <Eraser className="mr-2 h-4 w-4" />
-                    Cancella
-                  </Button>
-                  
-                  <Button
-                    type="button"
-                    className="game-button-primary"
-                    onClick={handleMarkClueWritten}
-                    disabled={submitting}
-                  >
-                    Indizio Scritto
-                  </Button>
-                </div>
-              </>
+                <Button
+                  type="button"
+                  className="game-button-primary"
+                  onClick={handleMarkClueWritten}
+                  disabled={submitting}
+                >
+                  Indizio Scritto
+                </Button>
+              </div>
             )}
           </div>
         );
@@ -210,8 +207,18 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
               <p className="mt-2 text-sm">Non mostrare il tuo schermo all'indovino! ({round.guesserName})</p>
             </div>
             
-            <div className="text-center py-6">
-              <h3 className="text-xl font-bold mb-3">Confronto Indizi</h3>
+            <div className="text-center">
+              <p className="mb-2">Il tuo indizio:</p>
+              <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
+                <canvas
+                  ref={canvasRef}
+                  className="touch-none w-full h-64 pointer-events-none"
+                />
+              </div>
+            </div>
+            
+            <div className="text-center py-3">
+              <h3 className="text-xl font-bold mb-2">Confronto Indizi</h3>
               <div className="p-4 bg-game-card border-game-border rounded-md">
                 <p>
                   Tutti i giocatori hanno scritto i loro indizi!
@@ -233,8 +240,18 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
               <p className="mt-2 text-sm">Non mostrare il tuo schermo all'indovino! ({round.guesserName})</p>
             </div>
             
-            <div className="text-center py-6">
-              <h3 className="text-xl font-bold mb-3">Fase di Indovinello</h3>
+            <div className="text-center">
+              <p className="mb-2">Il tuo indizio:</p>
+              <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
+                <canvas
+                  ref={canvasRef}
+                  className="touch-none w-full h-64 pointer-events-none"
+                />
+              </div>
+            </div>
+            
+            <div className="text-center py-3">
+              <h3 className="text-xl font-bold mb-2">Fase di Indovinello</h3>
               <p>
                 Mostrate i vostri indizi all'indovino e lasciate che provi a indovinare la parola segreta.
               </p>
