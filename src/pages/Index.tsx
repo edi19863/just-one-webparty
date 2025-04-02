@@ -5,6 +5,7 @@ import CreateGame from "@/components/CreateGame";
 import JoinGame from "@/components/JoinGame";
 import { useGameState } from "@/hooks/useGameState";
 import { toast } from "sonner";
+import { GameMode } from "@/types/game";
 
 const Index = () => {
   const { createGame, joinGame } = useGameState();
@@ -43,10 +44,10 @@ const Index = () => {
     checkExistingGame();
   }, [navigate]);
   
-  const handleCreateGame = async (nickname: string) => {
+  const handleCreateGame = async (nickname: string, mode: GameMode) => {
     try {
-      console.log("Creazione nuova partita con nickname:", nickname);
-      const result = await createGame(nickname);
+      console.log(`Creazione nuova partita con nickname: ${nickname}, modalità: ${mode}`);
+      const result = await createGame(nickname, mode);
       
       if (result) {
         console.log(`Partita creata con ID: ${result.gameId}, codice: ${result.gameCode}`);

@@ -1,5 +1,4 @@
-
-import { Game, GameStatus, Player, Round, Clue } from "@/types/game";
+import { Game, GameStatus, Player, Round, Clue, GameMode, IRLStatus } from "@/types/game";
 import { checkWordSimilarity } from "./wordUtils";
 
 // Generate a random 5-character alphanumeric code
@@ -18,7 +17,7 @@ export const generatePlayerId = (): string => {
 };
 
 // Create a new game with the given host player
-export const createNewGame = (hostId: string, hostNickname: string): Game => {
+export const createNewGame = (hostId: string, hostNickname: string, mode: GameMode = GameMode.ONLINE): Game => {
   const code = generateGameCode();
   const host: Player = {
     id: hostId,
@@ -32,6 +31,7 @@ export const createNewGame = (hostId: string, hostNickname: string): Game => {
     code: code,
     host_id: hostId,
     status: GameStatus.LOBBY,
+    mode: mode,
     players: [host],
     current_round: null,
     rounds: [],
@@ -108,10 +108,15 @@ export const startNewRound = (game: Game): Game => {
     isGuesser: player.id === guesser.id
   }));
   
+  // Set appropriate status based on game mode
+  const newStatus = game.mode === GameMode.ONLINE ? 
+    GameStatus.SUBMITTING_CLUES : 
+    GameStatus.SUBMITTING_CLUES; // In IRL mode, we still use the same status
+  
   return {
     ...game,
     players: updatedPlayers,
-    status: GameStatus.SUBMITTING_CLUES,
+    status: newStatus,
     current_round: newRound,
     rounds: [...game.rounds, newRound],
     updated_at: new Date().toISOString()
@@ -142,6 +147,64 @@ export const addClue = (game: Game, playerId: string, word: string): Game => {
   const allCluesSubmitted = nonGuessers.length === updatedRound.clues.length;
   
   const updatedStatus = allCluesSubmitted ? GameStatus.REVIEWING_CLUES : game.status;
+  
+  // Update the rounds array as well
+  const updatedRounds = game.rounds.map(round => 
+    round.roundNumber === updatedRound.roundNumber ? updatedRound : round
+  );
+  
+  return {
+    ...game,
+    status: updatedStatus,
+    current_round: updatedRound,
+    rounds: updatedRounds,
+    updated_at: new Date().toISOString()
+  };
+};
+
+// Mark a clue as written (for IRL mode)
+export const markClueWritten = (game: Game, playerId: string): Game => {
+  if (!game.current_round) return game;
+  
+  const player = game.players.find(p => p.id === playerId);
+  if (!player || player.isGuesser) return game;
+  
+  // Create an empty clue to mark that this player has written their clue
+  const clue: Clue = {
+    playerId,
+    playerName: player.nickname,
+    word: "IRL_CLUE", // Not actually used in IRL mode
+    filtered: false
+  };
+  
+  // Check if player has already submitted a clue
+  const existingClueIndex = game.current_round.clues.findIndex(c => c.playerId === playerId);
+  let updatedClues = [...game.current_round.clues];
+  
+  if (existingClueIndex >= 0) {
+    // Replace existing clue
+    updatedClues[existingClueIndex] = clue;
+  } else {
+    // Add new clue
+    updatedClues = [...updatedClues, clue];
+  }
+  
+  const updatedRound = {
+    ...game.current_round,
+    clues: updatedClues
+  };
+  
+  // Check if all non-guessers have submitted clues
+  const nonGuessers = game.players.filter(p => !p.isGuesser);
+  const allCluesSubmitted = nonGuessers.length === updatedRound.clues.length;
+  
+  // In IRL mode, once all clues are submitted, we move to comparing clues status
+  let updatedStatus = game.status;
+  if (game.mode === GameMode.IRL && allCluesSubmitted) {
+    updatedStatus = GameStatus.REVIEWING_CLUES;
+  } else if (game.mode === GameMode.ONLINE && allCluesSubmitted) {
+    updatedStatus = GameStatus.REVIEWING_CLUES;
+  }
   
   // Update the rounds array as well
   const updatedRounds = game.rounds.map(round => 
@@ -218,6 +281,31 @@ export const submitGuess = (game: Game, guess: string): Game => {
   const updatedRound = {
     ...game.current_round,
     guess,
+    correct: isCorrect,
+    completed: true
+  };
+  
+  // Update the rounds array as well
+  const updatedRounds = game.rounds.map(round => 
+    round.roundNumber === updatedRound.roundNumber ? updatedRound : round
+  );
+  
+  return {
+    ...game,
+    status: GameStatus.ROUND_RESULT,
+    current_round: updatedRound,
+    rounds: updatedRounds,
+    updated_at: new Date().toISOString()
+  };
+};
+
+// Update guess result for IRL mode
+export const updateIRLGuessResult = (game: Game, isCorrect: boolean): Game => {
+  if (!game.current_round || game.mode !== GameMode.IRL) return game;
+  
+  const updatedRound = {
+    ...game.current_round,
+    guess: isCorrect ? game.current_round.secretWord : "Risposta errata",
     correct: isCorrect,
     completed: true
   };

@@ -24,16 +24,22 @@ export interface Round {
   completed: boolean;
 }
 
+export enum GameMode {
+  ONLINE = 'online',
+  IRL = 'irl'
+}
+
 export interface Game {
   id: string;
   code: string;
-  host_id: string;  // Changed from hostId to host_id to match Supabase column
+  host_id: string;
   status: GameStatus;
+  mode: GameMode;
   players: Player[];
-  current_round: Round | null;  // Changed from currentRound to current_round
+  current_round: Round | null;
   rounds: Round[];
-  created_at: string; // ISO string format for timestamp without timezone
-  updated_at: string; // ISO string format for timestamp without timezone
+  created_at: string;
+  updated_at: string;
 }
 
 export enum GameStatus {
@@ -44,4 +50,11 @@ export enum GameStatus {
   GUESSING = 'guessing',
   ROUND_RESULT = 'round_result',
   GAME_OVER = 'game_over'
+}
+
+// Stati specifici per la modalità IRL
+export enum IRLStatus {
+  WAITING_FOR_CLUES = 'waiting_for_clues',
+  COMPARING_CLUES = 'comparing_clues',
+  WAITING_FOR_GUESS = 'waiting_for_guess'
 }

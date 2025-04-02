@@ -5,7 +5,7 @@ import { useGameState } from "@/hooks/useGameState";
 import Header from "@/components/Header";
 import Lobby from "@/components/Lobby";
 import GameRoom from "@/components/GameRoom";
-import { GameStatus } from "@/types/game";
+import { GameStatus, GameMode } from "@/types/game";
 import { toast } from "sonner";
 
 const Game = () => {
@@ -26,7 +26,9 @@ const Game = () => {
     leaveGame,
     startRound,
     submitClue,
-    submitGuess
+    submitGuess,
+    markClueWritten,
+    updateGuessResult
   } = useGameState({
     gameId,
     playerId: storedPlayerId || undefined,
@@ -207,6 +209,8 @@ const Game = () => {
           onSubmitClue={submitClue}
           onSubmitGuess={submitGuess}
           onStartRound={startRound}
+          onMarkClueWritten={markClueWritten}
+          onUpdateGuessResult={updateGuessResult}
         />
       )}
     </div>

@@ -5,14 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { GameMode } from "@/types/game";
 
 interface CreateGameProps {
-  onCreateGame: (nickname: string) => Promise<{ gameId: string; playerId: string; gameCode: string } | null>;
+  onCreateGame: (nickname: string, mode: GameMode) => Promise<{ gameId: string; playerId: string; gameCode: string } | null>;
 }
 
 const CreateGame = ({ onCreateGame }: CreateGameProps) => {
   const [nickname, setNickname] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [gameMode, setGameMode] = useState<GameMode>(GameMode.ONLINE);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,7 +24,7 @@ const CreateGame = ({ onCreateGame }: CreateGameProps) => {
     
     setIsCreating(true);
     try {
-      const result = await onCreateGame(nickname.trim());
+      const result = await onCreateGame(nickname.trim(), gameMode);
       if (result) {
         console.log("Partita creata con successo con ID:", result.gameId);
         
@@ -72,6 +75,34 @@ const CreateGame = ({ onCreateGame }: CreateGameProps) => {
                 className="game-input"
                 maxLength={20}
               />
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="game-mode" className="text-sm font-medium">
+                Modalità di Gioco
+              </label>
+              <div className="flex items-center justify-between rounded-md border p-3">
+                <div className="space-y-0.5">
+                  <label 
+                    htmlFor="game-mode-toggle" 
+                    className="text-sm font-medium cursor-pointer"
+                  >
+                    {gameMode === GameMode.ONLINE ? "Online" : "Play IRL"}
+                  </label>
+                  <p className="text-xs text-game-muted">
+                    {gameMode === GameMode.ONLINE 
+                      ? "Gioca completamente online" 
+                      : "Per gruppi che giocano fisicamente insieme"}
+                  </p>
+                </div>
+                <Switch
+                  id="game-mode-toggle"
+                  checked={gameMode === GameMode.IRL}
+                  onCheckedChange={(checked) => 
+                    setGameMode(checked ? GameMode.IRL : GameMode.ONLINE)
+                  }
+                />
+              </div>
             </div>
           </div>
         </CardContent>

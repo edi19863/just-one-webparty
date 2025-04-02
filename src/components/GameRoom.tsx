@@ -1,6 +1,5 @@
-
 import { useEffect } from "react";
-import { Game, GameStatus } from "@/types/game";
+import { Game, GameStatus, GameMode } from "@/types/game";
 import PlayerList from "./PlayerList";
 import ClueInput from "./ClueInput";
 import GuessInput from "./GuessInput";
@@ -8,6 +7,7 @@ import WordDisplay from "./WordDisplay";
 import RoundResults from "./RoundResults";
 import GameControls from "./GameControls";
 import PartialResults from "./PartialResults";
+import IRLGameRoom from "./IRLGameRoom";
 
 interface GameRoomProps {
   game: Game;
@@ -15,9 +15,33 @@ interface GameRoomProps {
   onSubmitClue: (clue: string) => void;
   onSubmitGuess: (guess: string) => void;
   onStartRound: () => void;
+  onMarkClueWritten?: () => void;
+  onUpdateGuessResult?: (isCorrect: boolean) => void;
 }
 
-const GameRoom = ({ game, currentPlayerId, onSubmitClue, onSubmitGuess, onStartRound }: GameRoomProps) => {
+const GameRoom = ({ 
+  game, 
+  currentPlayerId, 
+  onSubmitClue, 
+  onSubmitGuess, 
+  onStartRound,
+  onMarkClueWritten,
+  onUpdateGuessResult
+}: GameRoomProps) => {
+  // If this is an IRL game and we have the IRL-specific handlers, use the IRL game room
+  if (game.mode === GameMode.IRL && onMarkClueWritten && onUpdateGuessResult) {
+    return (
+      <IRLGameRoom
+        game={game}
+        currentPlayerId={currentPlayerId}
+        onMarkClueWritten={onMarkClueWritten}
+        onUpdateGuessResult={onUpdateGuessResult}
+        onStartRound={onStartRound}
+      />
+    );
+  }
+  
+  // Otherwise, use the standard online game room
   const currentPlayer = game.players.find(p => p.id === currentPlayerId);
   const isHost = currentPlayerId === game.host_id;
   const isGuesser = currentPlayer?.isGuesser || false;

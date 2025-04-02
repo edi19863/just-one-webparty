@@ -1,6 +1,5 @@
-
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Game, GameStatus } from '@/types/game';
+import { Game, GameStatus, GameMode } from '@/types/game';
 import * as gameUtils from '@/utils/gameUtils';
 import { useToast } from '@/components/ui/use-toast';
 import { toast as sonnerToast } from 'sonner';
@@ -54,11 +53,11 @@ export const useGameState = (options?: UseGameStateOptions) => {
   }, []);
 
   // Create a new game
-  const createGame = useCallback(async (nickname: string) => {
+  const createGame = useCallback(async (nickname: string, mode: GameMode = GameMode.ONLINE) => {
     const id = gameUtils.generatePlayerId();
     setPlayerId(id);
     
-    const newGame = gameUtils.createNewGame(id, nickname);
+    const newGame = gameUtils.createNewGame(id, nickname, mode);
     
     // Save game to Supabase
     const savedGame = await createGameInDb(newGame);
@@ -68,15 +67,15 @@ export const useGameState = (options?: UseGameStateOptions) => {
       lastUpdateTimeRef.current = Date.now();
       
       toast({
-        title: 'Game Created!',
-        description: `Your game code is ${savedGame.code}`,
+        title: 'Partita Creata!',
+        description: `Il codice della tua partita è ${savedGame.code}`,
       });
       
       return { gameId: savedGame.id, playerId: id, gameCode: savedGame.code };
     } else {
       toast({
-        title: 'Error',
-        description: 'Failed to create game',
+        title: 'Errore',
+        description: 'Impossibile creare la partita',
         variant: 'destructive',
       });
       return null;
@@ -94,7 +93,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
         console.error('Game not found with code:', code);
         setError('Game not found');
         toast({
-          title: 'Error',
+          title: 'Errore',
           description: 'Game not found with that code',
           variant: 'destructive',
         });
@@ -123,7 +122,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
       } else {
         console.error('Failed to update game after joining');
         toast({
-          title: 'Error',
+          title: 'Errore',
           description: 'Failed to join game',
           variant: 'destructive',
         });
@@ -133,7 +132,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
       console.error('Error joining game:', err);
       setError('Error joining game');
       toast({
-        title: 'Error',
+        title: 'Errore',
         description: 'Failed to join game',
         variant: 'destructive',
       });
@@ -156,8 +155,8 @@ export const useGameState = (options?: UseGameStateOptions) => {
       sonnerToast.success(`Round ${savedGame.rounds.length} has begun!`);
     } else {
       toast({
-        title: 'Error',
-        description: 'Failed to start round',
+        title: 'Errore',
+        description: 'Impossibile avviare la partita',
         variant: 'destructive',
       });
     }
@@ -175,7 +174,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
       setGameState(savedGame);
       lastUpdateTimeRef.current = Date.now();
       
-      sonnerToast.success('Your clue has been recorded');
+      sonnerToast.success('Il tuo indizio è stato registrato');
       
       // If all clues are in, filter duplicates
       if (savedGame.status === GameStatus.REVIEWING_CLUES) {
@@ -194,8 +193,8 @@ export const useGameState = (options?: UseGameStateOptions) => {
       }
     } else {
       toast({
-        title: 'Error',
-        description: 'Failed to submit clue',
+        title: 'Errore',
+        description: 'Impossibile registrare l\'indizio',
         variant: 'destructive',
       });
     }
@@ -214,14 +213,62 @@ export const useGameState = (options?: UseGameStateOptions) => {
       lastUpdateTimeRef.current = Date.now();
       
       if (savedGame.current_round?.correct) {
-        sonnerToast.success('Correct! Well done!');
+        sonnerToast.success('Risposta corretta!');
       } else {
-        sonnerToast.error(`Not quite. The word was "${savedGame.current_round?.secretWord}"`);
+        sonnerToast.error(`Risposta errata. La parola era "${savedGame.current_round?.secretWord}"`);
       }
     } else {
       toast({
-        title: 'Error',
-        description: 'Failed to submit guess',
+        title: 'Errore',
+        description: 'Impossibile registrare la risposta',
+        variant: 'destructive',
+      });
+    }
+  }, [gameState, playerId, toast]);
+
+  // Mark clue as written (for IRL mode)
+  const markClueWritten = useCallback(async () => {
+    if (!gameState || !playerId) return;
+    
+    const updatedGame = gameUtils.markClueWritten(gameState, playerId);
+    const savedGame = await updateGameInDb(updatedGame);
+    
+    if (savedGame) {
+      console.log('Clue marked as written:', savedGame);
+      setGameState(savedGame);
+      lastUpdateTimeRef.current = Date.now();
+      
+      sonnerToast.success('Il tuo indizio è stato registrato');
+    } else {
+      toast({
+        title: 'Errore',
+        description: 'Impossibile registrare l\'indizio',
+        variant: 'destructive',
+      });
+    }
+  }, [gameState, playerId, toast]);
+
+  // Update guess result (for IRL mode)
+  const updateGuessResult = useCallback(async (isCorrect: boolean) => {
+    if (!gameState || !playerId) return;
+    
+    const updatedGame = gameUtils.updateIRLGuessResult(gameState, isCorrect);
+    const savedGame = await updateGameInDb(updatedGame);
+    
+    if (savedGame) {
+      console.log('Guess result updated:', savedGame);
+      setGameState(savedGame);
+      lastUpdateTimeRef.current = Date.now();
+      
+      if (isCorrect) {
+        sonnerToast.success('Risposta corretta!');
+      } else {
+        sonnerToast.error('Risposta errata');
+      }
+    } else {
+      toast({
+        title: 'Errore',
+        description: 'Impossibile aggiornare il risultato',
         variant: 'destructive',
       });
     }
@@ -333,6 +380,8 @@ export const useGameState = (options?: UseGameStateOptions) => {
     startRound,
     submitClue,
     submitGuess,
+    markClueWritten,
+    updateGuessResult,
     leaveGame
   };
 };
