@@ -27,7 +27,6 @@ export const useGameState = (options?: UseGameStateOptions) => {
   const supabaseChannelRef = useRef<RealtimeChannel | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
 
-  // Load game from Supabase
   const loadGameState = useCallback(async (gameId: string) => {
     setLoading(true);
     try {
@@ -52,14 +51,12 @@ export const useGameState = (options?: UseGameStateOptions) => {
     }
   }, []);
 
-  // Create a new game
-  const createGame = useCallback(async (nickname: string, mode: GameMode = GameMode.ONLINE) => {
+  const createGame = useCallback(async (nickname: string, mode: GameMode = GameMode.IRL) => {
     const id = gameUtils.generatePlayerId();
     setPlayerId(id);
     
     const newGame = gameUtils.createNewGame(id, nickname, mode);
     
-    // Save game to Supabase
     const savedGame = await createGameInDb(newGame);
     if (savedGame) {
       console.log('Game created:', savedGame);
@@ -83,11 +80,9 @@ export const useGameState = (options?: UseGameStateOptions) => {
     }
   }, [toast]);
 
-  // Join an existing game
   const joinGame = useCallback(async (code: string, nickname: string) => {
     try {
       console.log(`Attempting to join game with code: ${code}`);
-      // Find game by code in Supabase
       const game = await getGameByCode(code);
       
       if (!game) {
@@ -103,11 +98,9 @@ export const useGameState = (options?: UseGameStateOptions) => {
       
       console.log('Found game:', game);
       
-      // Add player to game
       const { game: updatedGame, playerId: newPlayerId } = gameUtils.addPlayerToGame(game, nickname);
       setPlayerId(newPlayerId);
       
-      // Update game in Supabase
       const savedGame = await updateGameInDb(updatedGame);
       if (savedGame) {
         console.log('Joined game:', savedGame);
@@ -141,7 +134,6 @@ export const useGameState = (options?: UseGameStateOptions) => {
     }
   }, [toast]);
 
-  // Start a new round
   const startRound = useCallback(async () => {
     if (!gameState) return;
     
@@ -163,7 +155,6 @@ export const useGameState = (options?: UseGameStateOptions) => {
     }
   }, [gameState, toast]);
 
-  // Submit a clue
   const submitClue = useCallback(async (word: string) => {
     if (!gameState || !playerId) return;
     
@@ -177,7 +168,6 @@ export const useGameState = (options?: UseGameStateOptions) => {
       
       sonnerToast.success('Il tuo indizio è stato registrato');
       
-      // If all clues are in, filter duplicates
       if (savedGame.status === GameStatus.REVIEWING_CLUES) {
         setTimeout(async () => {
           const filteredGame = gameUtils.filterClues(savedGame);
@@ -201,7 +191,6 @@ export const useGameState = (options?: UseGameStateOptions) => {
     }
   }, [gameState, playerId, toast]);
 
-  // Submit a guess
   const submitGuess = useCallback(async (guess: string) => {
     if (!gameState || !playerId) return;
     
@@ -227,7 +216,6 @@ export const useGameState = (options?: UseGameStateOptions) => {
     }
   }, [gameState, playerId, toast]);
 
-  // Mark clue as written (for IRL mode)
   const markClueWritten = useCallback(async () => {
     if (!gameState || !playerId) return;
     
@@ -249,7 +237,6 @@ export const useGameState = (options?: UseGameStateOptions) => {
     }
   }, [gameState, playerId, toast]);
 
-  // Update guess result (for IRL mode)
   const updateGuessResult = useCallback(async (isCorrect: boolean) => {
     if (!gameState || !playerId) return;
     
@@ -275,11 +262,9 @@ export const useGameState = (options?: UseGameStateOptions) => {
     }
   }, [gameState, playerId, toast]);
 
-  // Leave game
   const leaveGame = useCallback(async () => {
     if (!gameState || !playerId) return;
     
-    // Clean up subscriptions
     if (supabaseChannelRef.current) {
       supabaseChannelRef.current.unsubscribe();
       supabaseChannelRef.current = null;
@@ -294,13 +279,11 @@ export const useGameState = (options?: UseGameStateOptions) => {
     sonnerToast.info('You have left the game');
   }, [gameState, playerId]);
 
-  // Poll for game updates as a fallback mechanism
   useEffect(() => {
     let pollInterval: number | undefined;
     
     if (gameState?.id && !pollInterval) {
       pollInterval = window.setInterval(async () => {
-        // Only poll if it's been more than 5 seconds since our last update
         const timeSinceLastUpdate = Date.now() - lastUpdateTimeRef.current;
         if (timeSinceLastUpdate > 5000) {
           console.log('Polling for game updates...');
@@ -316,7 +299,7 @@ export const useGameState = (options?: UseGameStateOptions) => {
             }
           }
         }
-      }, 5000); // Poll every 5 seconds
+      }, 5000);
     }
     
     return () => {
@@ -326,19 +309,15 @@ export const useGameState = (options?: UseGameStateOptions) => {
     };
   }, [gameState?.id]);
 
-  // Set up and clean up real-time subscription
   useEffect(() => {
     if (gameState?.id) {
-      // Clean up any existing subscription
       if (supabaseChannelRef.current) {
         supabaseChannelRef.current.unsubscribe();
       }
       
-      // Set up new subscription
       const channel = subscribeToGame(gameState.id, (updatedGame) => {
         console.log('Real-time update received:', updatedGame);
         setGameState((currentGameState) => {
-          // Only update if the game has been updated more recently
           if (!currentGameState || new Date(updatedGame.updated_at) > new Date(currentGameState.updated_at)) {
             lastUpdateTimeRef.current = Date.now();
             return updatedGame;
@@ -358,7 +337,6 @@ export const useGameState = (options?: UseGameStateOptions) => {
     }
   }, [gameState?.id]);
 
-  // Load initial game state if gameId is provided
   useEffect(() => {
     if (options?.gameId) {
       loadGameState(options.gameId);
@@ -367,7 +345,6 @@ export const useGameState = (options?: UseGameStateOptions) => {
     }
   }, [options?.gameId, loadGameState]);
 
-  // Get current player
   const currentPlayer = gameState?.players.find(p => p.id === playerId) || null;
 
   return {

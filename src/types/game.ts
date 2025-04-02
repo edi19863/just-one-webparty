@@ -1,5 +1,4 @@
 
-
 export interface Player {
   id: string;
   nickname: string;
@@ -26,8 +25,8 @@ export interface Round {
 }
 
 export enum GameMode {
-  ONLINE = 'online',
-  IRL = 'irl'
+  IRL = 'irl',
+  ONLINE = 'online'
 }
 
 export interface Game {
@@ -35,7 +34,7 @@ export interface Game {
   code: string;
   host_id: string;
   status: GameStatus;
-  mode: GameMode; // Changed from optional to required
+  mode: GameMode;
   players: Player[];
   current_round: Round | null;
   rounds: Round[];
@@ -59,4 +58,3 @@ export enum IRLStatus {
   COMPARING_CLUES = 'comparing_clues',
   WAITING_FOR_GUESS = 'waiting_for_guess'
 }
-

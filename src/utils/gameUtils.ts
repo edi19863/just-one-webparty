@@ -1,4 +1,3 @@
-
 import { Game, GameStatus, Player, Round, Clue, GameMode, IRLStatus } from "@/types/game";
 import { checkWordSimilarity } from "./wordUtils";
 
@@ -18,7 +17,7 @@ export const generatePlayerId = (): string => {
 };
 
 // Create a new game with the given host player
-export const createNewGame = (hostId: string, hostNickname: string, mode: GameMode = GameMode.ONLINE): Game => {
+export const createNewGame = (hostId: string, hostNickname: string, mode: GameMode = GameMode.IRL): Game => {
   const code = generateGameCode();
   const host: Player = {
     id: hostId,
@@ -32,7 +31,7 @@ export const createNewGame = (hostId: string, hostNickname: string, mode: GameMo
     code: code,
     host_id: hostId,
     status: GameStatus.LOBBY,
-    mode: mode, // This won't be stored in the database, but used client-side
+    mode: mode,
     players: [host],
     current_round: null,
     rounds: [],
@@ -110,9 +109,7 @@ export const startNewRound = (game: Game): Game => {
   }));
   
   // Set appropriate status based on game mode
-  const newStatus = game.mode === GameMode.ONLINE ? 
-    GameStatus.SUBMITTING_CLUES : 
-    GameStatus.SUBMITTING_CLUES; // In IRL mode, we still use the same status
+  const newStatus = GameStatus.SUBMITTING_CLUES;
   
   return {
     ...game,
@@ -302,7 +299,7 @@ export const submitGuess = (game: Game, guess: string): Game => {
 
 // Update guess result for IRL mode
 export const updateIRLGuessResult = (game: Game, isCorrect: boolean): Game => {
-  if (!game.current_round || game.mode !== GameMode.IRL) return game;
+  if (!game.current_round) return game;
   
   const updatedRound = {
     ...game.current_round,
