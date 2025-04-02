@@ -1,6 +1,6 @@
-
 import { createClient } from '@supabase/supabase-js';
-import type { Game, GameMode } from '@/types/game';
+import { Game } from '@/types/game';
+import { GameMode } from '@/types/game';
 
 const supabaseUrl = 'https://tqvnpmhfavjiqxplutwk.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRxdm5wbWhmYXZqaXF4cGx1dHdrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDM0NjAzOTAsImV4cCI6MjA1OTAzNjM5MH0.7cLrQfVWwIw_p0V4xfZDG7MZCQpDyov-Qz_5cNCmD_Y';
@@ -60,21 +60,15 @@ export const getGameById = async (id: string) => {
 };
 
 export const createGameInDb = async (game: Game) => {
-  // Use the current timestamp for created_at and updated_at
-  // Remove the 'mode' property from the game object to match database schema
-  const { mode, ...gameWithoutMode } = game;
-  
-  const gameToCreate = {
-    ...gameWithoutMode,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
-
   try {
-    console.log('Creating game in DB:', gameToCreate);
+    console.log('Creating game in DB:', game);
     const { data, error } = await supabase
       .from('games')
-      .insert(gameToCreate)
+      .insert({
+        ...game,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
       .select()
       .single();
     
@@ -83,13 +77,7 @@ export const createGameInDb = async (game: Game) => {
       return null;
     }
     
-    // Add back the mode property for client-side use
-    const gameWithMode = {
-      ...data,
-      mode: mode || GameMode.ONLINE
-    };
-    
-    return gameWithMode as Game;
+    return data as Game;
   } catch (err) {
     console.error('Exception creating game:', err);
     return null;
@@ -97,19 +85,13 @@ export const createGameInDb = async (game: Game) => {
 };
 
 export const updateGameInDb = async (game: Game) => {
-  // Always update the updated_at timestamp
-  // Remove the 'mode' property from the game object to match database schema
-  const { mode, ...gameWithoutMode } = game;
-  
-  const gameToUpdate = {
-    ...gameWithoutMode,
-    updated_at: new Date().toISOString()
-  };
-
   try {
     const { data, error } = await supabase
       .from('games')
-      .update(gameToUpdate)
+      .update({
+        ...game,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', game.id)
       .select()
       .single();
@@ -119,13 +101,7 @@ export const updateGameInDb = async (game: Game) => {
       return null;
     }
     
-    // Add back the mode property for client-side use
-    const gameWithMode = {
-      ...data,
-      mode: mode || GameMode.ONLINE
-    };
-    
-    return gameWithMode as Game;
+    return data as Game;
   } catch (err) {
     console.error('Exception updating game:', err);
     return null;
