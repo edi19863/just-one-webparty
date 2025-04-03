@@ -13,17 +13,29 @@ interface IRLGuesserViewProps {
 
 const IRLGuesserView = ({ round, status, onUpdateGuessResult }: IRLGuesserViewProps) => {
   const [submitting, setSubmitting] = useState(false);
+  const [resultSubmitted, setResultSubmitted] = useState(false);
   
   const handleSubmitResult = async (isCorrect: boolean) => {
     setSubmitting(true);
     try {
       await onUpdateGuessResult(isCorrect);
+      setResultSubmitted(true);
     } finally {
       setSubmitting(false);
     }
   };
   
   const renderGuessButtons = () => {
+    if (resultSubmitted) {
+      return (
+        <div className="text-center py-4">
+          <p className="text-lg font-medium">
+            Risultato registrato. Attendi l'inizio del prossimo turno.
+          </p>
+        </div>
+      );
+    }
+    
     return (
       <div className="grid grid-cols-2 gap-4 mt-6">
         <Button

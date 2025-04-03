@@ -2,7 +2,7 @@
 import { useRef, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GameStatus, Round } from "@/types/game";
+import { GameStatus, Round, ClueStatus } from "@/types/game";
 import { CheckCircle, Eraser, Check, X } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -13,18 +13,13 @@ interface IRLClueWriterViewProps {
   hasSubmitted: boolean;
 }
 
-interface ClueStatus {
-  playerId: string;
-  playerName: string;
-  status: 'unique' | 'duplicate' | 'undecided';
-}
-
 const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: IRLClueWriterViewProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [clueStatuses, setClueStatuses] = useState<ClueStatus[]>([]);
+  const [cluePreview, setCluePreview] = useState<string | null>(null);
   
   // Initialize canvas when component mounts
   useEffect(() => {
@@ -136,12 +131,22 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     
     context.lineTo(x, y);
     context.stroke();
+    
+    // Update the preview after each drawing action
+    if (canvasRef.current) {
+      setCluePreview(canvasRef.current.toDataURL("image/png"));
+    }
   };
   
   const stopDrawing = () => {
     if (!context) return;
     setIsDrawing(false);
     context.closePath();
+    
+    // Save final preview
+    if (canvasRef.current) {
+      setCluePreview(canvasRef.current.toDataURL("image/png"));
+    }
   };
   
   const clearCanvas = () => {
@@ -149,9 +154,17 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     
     context.fillStyle = '#fff';
     context.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+    
+    // Clear the preview as well
+    setCluePreview(null);
   };
   
   const handleMarkClueWritten = async () => {
+    // Save the preview before submitting
+    if (canvasRef.current) {
+      setCluePreview(canvasRef.current.toDataURL("image/png"));
+    }
+    
     setSubmitting(true);
     try {
       await onMarkClueWritten();
@@ -177,22 +190,17 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     );
   };
 
-  const getCluePreview = () => {
-    if (!canvasRef.current) return null;
-    return canvasRef.current.toDataURL("image/png");
-  };
-
   const renderClueStatusTable = () => {
     if (clueStatuses.length === 0) return null;
 
     return (
-      <div className="mt-6 border rounded-md">
+      <div className="mt-6 rounded-md overflow-hidden border border-gray-600">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Giocatore</TableHead>
-              <TableHead>Stato</TableHead>
-              <TableHead>Azione</TableHead>
+              <TableHead className="text-white">Giocatore</TableHead>
+              <TableHead className="text-white">Stato</TableHead>
+              <TableHead className="text-white">Azione</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -209,8 +217,16 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
               >
                 <TableCell>{clueStatus.playerName}</TableCell>
                 <TableCell>
-                  {clueStatus.status === 'unique' && 'Unico'}
-                  {clueStatus.status === 'duplicate' && 'Multiplo'}
+                  {clueStatus.status === 'unique' && (
+                    <span className="text-green-500 flex items-center">
+                      <Check className="h-4 w-4 mr-1" />Unico
+                    </span>
+                  )}
+                  {clueStatus.status === 'duplicate' && (
+                    <span className="text-red-500 flex items-center">
+                      <X className="h-4 w-4 mr-1" />Multiplo
+                    </span>
+                  )}
                   {clueStatus.status === 'undecided' && 'Non deciso'}
                 </TableCell>
                 <TableCell>
@@ -220,15 +236,13 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
                     onClick={() => toggleClueStatus(clueStatus.playerId)}
                     className={
                       clueStatus.status === 'unique' 
-                        ? 'text-green-500' 
+                        ? 'text-green-500 hover:text-green-600 hover:bg-green-900/20' 
                         : clueStatus.status === 'duplicate' 
-                          ? 'text-red-500' 
-                          : ''
+                          ? 'text-red-500 hover:text-red-600 hover:bg-red-900/20' 
+                          : 'hover:bg-gray-700'
                     }
                   >
-                    {clueStatus.status === 'unique' && <Check className="h-4 w-4 mr-1" />}
-                    {clueStatus.status === 'duplicate' && <X className="h-4 w-4 mr-1" />}
-                    Cambia
+                    Cambia stato
                   </Button>
                 </TableCell>
               </TableRow>
@@ -308,12 +322,22 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
             
             <div className="text-center">
               <p className="mb-2">Il tuo indizio:</p>
-              <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
-                <canvas
-                  ref={canvasRef}
-                  className="touch-none w-full h-64 pointer-events-none"
-                />
-              </div>
+              {cluePreview ? (
+                <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
+                  <img
+                    src={cluePreview}
+                    alt="Tuo indizio"
+                    className="w-full h-64 object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
+                  <canvas
+                    ref={canvasRef}
+                    className="touch-none w-full h-64 pointer-events-none"
+                  />
+                </div>
+              )}
             </div>
             
             <div className="text-center py-3">
@@ -323,7 +347,7 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
                   Tutti i giocatori hanno scritto i loro indizi!
                 </p>
                 <p className="mt-3">
-                  Per favore confrontate gli indizi tra voi e indicate quali sono unici e quali sono duplicati:
+                  Confrontate gli indizi tra voi e indicate quali sono unici e quali sono duplicati:
                 </p>
                 {renderClueStatusTable()}
               </div>
@@ -342,12 +366,22 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
             
             <div className="text-center">
               <p className="mb-2">Il tuo indizio:</p>
-              <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
-                <canvas
-                  ref={canvasRef}
-                  className="touch-none w-full h-64 pointer-events-none"
-                />
-              </div>
+              {cluePreview ? (
+                <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
+                  <img
+                    src={cluePreview}
+                    alt="Tuo indizio"
+                    className="w-full h-64 object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
+                  <canvas
+                    ref={canvasRef}
+                    className="touch-none w-full h-64 pointer-events-none"
+                  />
+                </div>
+              )}
             </div>
             
             <div className="text-center py-3">
