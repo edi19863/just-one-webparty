@@ -1,5 +1,4 @@
-
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Game, GameStatus, GameMode } from "@/types/game";
 import PlayerList from "./PlayerList";
 import ClueInput from "./ClueInput";
@@ -9,6 +8,7 @@ import RoundResults from "./RoundResults";
 import GameControls from "./GameControls";
 import PartialResults from "./PartialResults";
 import IRLGameRoom from "./IRLGameRoom";
+import { getClueStatuses } from "@/lib/supabase";
 
 interface GameRoomProps {
   game: Game;
@@ -36,33 +36,49 @@ const GameRoom = ({
   getPlayerClueStatus,
   areAllClueStatusesSelected
 }: GameRoomProps) => {
-  // If this is an IRL game and we have the IRL-specific handlers, use the IRL game room
-  if (game.mode === GameMode.IRL && 
-      onMarkClueWritten && 
-      onUpdateGuessResult && 
-      onUpdateClueStatus && 
-      getPlayerClueStatus && 
-      areAllClueStatusesSelected) {
+  const [clueStatuses, setClueStatuses] = useState<any[]>([]);
+  
+  useEffect(() => {
+    console.log("GameRoom rendering with mode:", game.mode);
+  }, [game.mode]);
+  
+  useEffect(() => {
+    const loadClueStatuses = async () => {
+      if (game.current_round) {
+        try {
+          const statuses = await getClueStatuses(game.id, game.current_round.roundNumber);
+          setClueStatuses(statuses);
+        } catch (err) {
+          console.error("Error loading clue statuses:", err);
+        }
+      }
+    };
+    
+    loadClueStatuses();
+  }, [game.id, game.current_round]);
+  
+  if (game.mode === GameMode.IRL) {
+    console.log("Rendering IRL Game Room");
     return (
       <IRLGameRoom
         game={game}
         currentPlayerId={currentPlayerId}
-        onMarkClueWritten={onMarkClueWritten}
-        onUpdateGuessResult={onUpdateGuessResult}
+        onMarkClueWritten={onMarkClueWritten || (() => {})}
+        onUpdateGuessResult={onUpdateGuessResult || (() => {})}
         onStartRound={onStartRound}
-        onUpdateClueStatus={onUpdateClueStatus}
-        getPlayerClueStatus={getPlayerClueStatus}
-        areAllClueStatusesSelected={areAllClueStatusesSelected}
+        onUpdateClueStatus={onUpdateClueStatus || (() => {})}
+        getPlayerClueStatus={getPlayerClueStatus || (() => null)}
+        areAllClueStatusesSelected={areAllClueStatusesSelected || (() => false)}
+        clueStatuses={clueStatuses}
       />
     );
   }
   
-  // Otherwise, use the standard online game room
+  console.log("Rendering Online Game Room");
   const currentPlayer = game.players.find(p => p.id === currentPlayerId);
   const isHost = currentPlayerId === game.host_id;
   const isGuesser = currentPlayer?.isGuesser || false;
   
-  // Handle case where we have a current round but need to filter clues
   useEffect(() => {
     const checkAllCluesSubmitted = () => {
       if (game.status === GameStatus.SUBMITTING_CLUES && game.current_round) {
@@ -70,7 +86,6 @@ const GameRoom = ({
         const allCluesSubmitted = nonGuessers.length === game.current_round.clues.length;
         
         if (allCluesSubmitted && isHost) {
-          // Small delay to allow animation
           setTimeout(() => {
             // This would automatically filter clues in a real app
             // For the demo, we rely on the filtering in gameUtils
@@ -180,11 +195,10 @@ const GameRoom = ({
           players={game.players} 
           currentPlayerId={currentPlayerId}
           game={game}
-          clueStatuses={null}
+          clueStatuses={getPlayerClueStatus}
         />
       </div>
       
-      {/* Mostra i risultati parziali se ci sono turni completati e non siamo nella schermata del risultato */}
       {game.status !== GameStatus.ROUND_RESULT && game.rounds.some(r => r.completed) && (
         <div className="mb-6">
           <PartialResults game={game} />

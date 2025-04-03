@@ -1,4 +1,3 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { Game, ClueStatus } from '@/types/game';
 import { GameMode } from '@/types/game';
@@ -22,27 +21,49 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 // Ensure clue_statuses table exists
 export const ensureClueStatusesTable = async () => {
   try {
-    const { error } = await supabase.rpc('ensure_clue_statuses_table');
+    console.log('Ensuring clue_statuses table exists...');
     
-    if (error) {
-      console.error('Error ensuring clue_statuses table:', error);
+    // Try to query the table to see if it exists
+    const { error: checkError } = await supabase
+      .from('clue_statuses')
+      .select('count(*)')
+      .limit(1)
+      .single();
       
-      // Fallback: create the table manually if RPC fails
-      await supabase.query(`
-        CREATE TABLE IF NOT EXISTS clue_statuses (
-          id SERIAL PRIMARY KEY,
-          game_id TEXT NOT NULL,
-          round_number INTEGER NOT NULL,
-          player_id TEXT NOT NULL,
-          status TEXT NOT NULL,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-          UNIQUE(game_id, round_number, player_id)
-        );
-      `);
+    if (checkError && checkError.message.includes('does not exist')) {
+      console.log('Table does not exist, creating it...');
+      
+      // If the table doesn't exist, create it manually
+      const { error: createError } = await supabase.rpc('create_clue_statuses_table');
+      
+      if (createError) {
+        console.error('Error creating table via RPC:', createError);
+        
+        // Fall back to direct SQL (this may not work in some environments)
+        const { error: sqlError } = await supabase.query(`
+          CREATE TABLE IF NOT EXISTS public.clue_statuses (
+            id SERIAL PRIMARY KEY,
+            game_id TEXT NOT NULL,
+            round_number INTEGER NOT NULL,
+            player_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+            UNIQUE(game_id, round_number, player_id)
+          );
+        `);
+        
+        if (sqlError) {
+          console.error('Error creating table via SQL:', sqlError);
+          return false;
+        }
+      }
+      
+      console.log('Table created successfully');
+    } else {
+      console.log('Table already exists');
     }
     
-    console.log('Ensured clue_statuses table exists');
     return true;
   } catch (err) {
     console.error('Exception ensuring clue_statuses table:', err);
@@ -206,8 +227,10 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
 
 // Add table initialization call when first loading
 export const initializeSupabaseTables = async () => {
-  await ensureClueStatusesTable();
-  console.log('Supabase tables initialized');
+  console.log('Initializing Supabase tables...');
+  const success = await ensureClueStatusesTable();
+  console.log('Supabase tables initialized:', success ? 'success' : 'failed');
+  return success;
 };
 
 // Clue status functions

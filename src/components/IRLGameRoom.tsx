@@ -15,9 +15,9 @@ interface IRLGameRoomProps {
   onUpdateGuessResult: (isCorrect: boolean) => void;
   onStartRound: () => void;
   onUpdateClueStatus: (status: 'unique' | 'duplicate') => void;
-  clueStatuses: any[];
   getPlayerClueStatus: (playerId: string) => 'unique' | 'duplicate' | null;
   areAllClueStatusesSelected: () => boolean;
+  clueStatuses: any[];
 }
 
 const IRLGameRoom = ({
@@ -28,7 +28,8 @@ const IRLGameRoom = ({
   onStartRound,
   onUpdateClueStatus,
   getPlayerClueStatus,
-  areAllClueStatusesSelected
+  areAllClueStatusesSelected,
+  clueStatuses
 }: IRLGameRoomProps) => {
   const currentPlayer = game.players.find(p => p.id === currentPlayerId);
   const isHost = currentPlayerId === game.host_id;
@@ -38,6 +39,13 @@ const IRLGameRoom = ({
   const hasSubmittedClue = game.current_round?.clues.some(
     clue => clue.playerId === currentPlayerId
   ) || false;
+  
+  // Debug info
+  useEffect(() => {
+    console.log("IRLGameRoom rendering with mode:", game.mode);
+    console.log("Current player is guesser:", isGuesser);
+    console.log("Current game status:", game.status);
+  }, [game.mode, isGuesser, game.status]);
   
   const renderGameContent = () => {
     switch (game.status) {
@@ -106,7 +114,7 @@ const IRLGameRoom = ({
           players={game.players} 
           currentPlayerId={currentPlayerId}
           game={game} 
-          clueStatuses={game.current_round ? getPlayerClueStatus : null}
+          clueStatuses={getPlayerClueStatus}
         />
       </div>
       

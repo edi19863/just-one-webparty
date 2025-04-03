@@ -15,22 +15,25 @@ interface CreateGameProps {
 const CreateGame = ({ onCreateGame }: CreateGameProps) => {
   const [nickname, setNickname] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const [gameMode, setGameMode] = useState<GameMode>(GameMode.IRL);
+  const [gameMode, setGameMode] = useState<GameMode>(GameMode.ONLINE);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nickname.trim()) return;
     
+    console.log("Creating game with mode:", gameMode);
     setIsCreating(true);
     try {
       const result = await onCreateGame(nickname.trim(), gameMode);
       if (result) {
         console.log("Partita creata con successo con ID:", result.gameId);
+        console.log("Game mode:", gameMode);
         
         // Memorizza i dati nel localStorage prima di navigare
         localStorage.setItem("current_game_id", result.gameId);
         localStorage.setItem(`player_id_${result.gameId}`, result.playerId);
+        localStorage.setItem(`game_mode_${result.gameId}`, gameMode);
         
         toast.success(`Partita creata! Il tuo codice è ${result.gameCode}`);
         
@@ -98,9 +101,11 @@ const CreateGame = ({ onCreateGame }: CreateGameProps) => {
                 <Switch
                   id="game-mode-toggle"
                   checked={gameMode === GameMode.IRL}
-                  onCheckedChange={(checked) => 
-                    setGameMode(checked ? GameMode.IRL : GameMode.ONLINE)
-                  }
+                  onCheckedChange={(checked) => {
+                    const mode = checked ? GameMode.IRL : GameMode.ONLINE;
+                    console.log("Setting game mode to:", mode);
+                    setGameMode(mode);
+                  }}
                 />
               </div>
             </div>

@@ -12,7 +12,8 @@ import {
   updateClueStatus,
   getClueStatuses,
   clearClueStatuses,
-  subscribeToGame 
+  subscribeToGame,
+  subscribeToClueStatuses
 } from '@/lib/supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
 
@@ -299,13 +300,12 @@ export const useGameState = (options?: UseGameStateOptions) => {
     );
     
     if (result) {
-      const updatedStatuses = await getClueStatuses(gameState.id, gameState.current_round.roundNumber);
-      setClueStatuses(updatedStatuses);
+      await loadClueStatuses();
       return true;
     }
     
     return false;
-  }, [gameState, playerId]);
+  }, [gameState, playerId, loadClueStatuses]);
 
   const loadClueStatuses = useCallback(async () => {
     if (!gameState || !gameState.current_round) return;
@@ -348,7 +348,13 @@ export const useGameState = (options?: UseGameStateOptions) => {
   useEffect(() => {
     if (gameState?.id) {
       if (supabaseChannelRef.current) {
-        supabaseChannelRef.current.unsubscribe();
+        try {
+          console.log("Removing existing game channel before creating a new one");
+          supabase.removeChannel(supabaseChannelRef.current);
+          supabaseChannelRef.current = null;
+        } catch (err) {
+          console.error("Error removing existing channel:", err);
+        }
       }
       
       const channel = subscribeToGame(gameState.id, (updatedGame) => {
@@ -366,8 +372,13 @@ export const useGameState = (options?: UseGameStateOptions) => {
       
       return () => {
         if (supabaseChannelRef.current) {
-          supabaseChannelRef.current.unsubscribe();
-          supabaseChannelRef.current = null;
+          try {
+            console.log("Removing game channel during cleanup");
+            supabase.removeChannel(supabaseChannelRef.current);
+            supabaseChannelRef.current = null;
+          } catch (err) {
+            console.error("Error removing channel during cleanup:", err);
+          }
         }
       };
     }
@@ -381,7 +392,48 @@ export const useGameState = (options?: UseGameStateOptions) => {
     }
   }, [options?.gameId, loadGameState]);
 
+  useEffect(() => {
+    if (!gameState?.id || !gameState.current_round) return;
+    
+    if (statusChannelRef.current) {
+      try {
+        console.log("Removing existing status channel before creating a new one");
+        supabase.removeChannel(statusChannelRef.current);
+        statusChannelRef.current = null;
+      } catch (err) {
+        console.error("Error removing existing status channel:", err);
+      }
+    }
+    
+    const channel = subscribeToClueStatuses(gameState.id, async () => {
+      await loadClueStatuses();
+    });
+    
+    statusChannelRef.current = channel;
+    
+    loadClueStatuses();
+    
+    return () => {
+      if (statusChannelRef.current) {
+        try {
+          console.log("Removing status channel during cleanup");
+          supabase.removeChannel(statusChannelRef.current);
+          statusChannelRef.current = null;
+        } catch (err) {
+          console.error("Error removing status channel during cleanup:", err);
+        }
+      }
+    };
+  }, [gameState?.id, gameState?.current_round?.roundNumber, loadClueStatuses]);
+
   const currentPlayer = gameState?.players.find(p => p.id === playerId) || null;
+
+  const getPlayerClueStatus = useCallback((playerId: string) => {
+    if (!clueStatuses.length) return null;
+    
+    const playerStatus = clueStatuses.find(status => status.player_id === playerId);
+    return playerStatus ? playerStatus.status : null;
+  }, [clueStatuses]);
 
   const areAllClueStatusesSelected = useCallback(() => {
     if (!gameState || !gameState.current_round || !clueStatuses.length) return false;
@@ -397,57 +449,6 @@ export const useGameState = (options?: UseGameStateOptions) => {
       )
     );
   }, [gameState, clueStatuses]);
-
-  const getPlayerClueStatus = useCallback((playerId: string) => {
-    if (!clueStatuses.length) return null;
-    
-    const playerStatus = clueStatuses.find(status => status.player_id === playerId);
-    return playerStatus ? playerStatus.status : null;
-  }, [clueStatuses]);
-
-  useEffect(() => {
-    if (!gameState?.id || !gameState.current_round) return;
-    
-    if (statusChannelRef.current) {
-      statusChannelRef.current.unsubscribe();
-      statusChannelRef.current = null;
-    }
-    
-    const channelName = `clue-status-updates:${gameState.id}`;
-    console.log(`Setting up subscription for clue statuses on channel ${channelName}`);
-    
-    const channel = supabase
-      .channel(channelName)
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'clue_statuses',
-          filter: `game_id=eq.${gameState.id}`
-        },
-        async () => {
-          const updatedStatuses = await getClueStatuses(
-            gameState.id, 
-            gameState.current_round!.roundNumber
-          );
-          console.log('Real-time update for clue statuses:', updatedStatuses);
-          setClueStatuses(updatedStatuses);
-        }
-      )
-      .subscribe();
-    
-    statusChannelRef.current = channel;
-    
-    loadClueStatuses();
-    
-    return () => {
-      if (statusChannelRef.current) {
-        statusChannelRef.current.unsubscribe();
-        statusChannelRef.current = null;
-      }
-    };
-  }, [gameState?.id, gameState?.current_round?.roundNumber, loadClueStatuses]);
 
   return {
     gameState,

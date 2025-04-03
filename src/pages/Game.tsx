@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGameState } from "@/hooks/useGameState";
@@ -14,6 +13,7 @@ const Game = () => {
   const navigate = useNavigate();
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
   const [loadAttempts, setLoadAttempts] = useState(0);
+  const [tablesInitialized, setTablesInitialized] = useState(false);
   
   // Get the stored player ID for this specific game
   const storedPlayerId = gameId ? localStorage.getItem(`player_id_${gameId}`) : null;
@@ -21,8 +21,12 @@ const Game = () => {
   // Initialize Supabase tables
   useEffect(() => {
     const init = async () => {
-      await initializeSupabaseTables();
+      console.log("Initializing Supabase tables...");
+      const success = await initializeSupabaseTables();
+      setTablesInitialized(success);
+      console.log("Tables initialized:", success);
     };
+    
     init();
   }, []);
   
@@ -223,6 +227,9 @@ const Game = () => {
           onStartRound={startRound}
           onMarkClueWritten={markClueWritten}
           onUpdateGuessResult={updateGuessResult}
+          onUpdateClueStatus={updatePlayerClueStatus}
+          getPlayerClueStatus={getPlayerClueStatus}
+          areAllClueStatusesSelected={areAllClueStatusesSelected}
         />
       )}
     </div>
