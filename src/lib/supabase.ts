@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { Game, ClueStatus } from '@/types/game';
 import { GameMode } from '@/types/game';
@@ -207,4 +208,84 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
 export const initializeSupabaseTables = async () => {
   await ensureClueStatusesTable();
   console.log('Supabase tables initialized');
+};
+
+// Clue status functions
+export const updateClueStatus = async (
+  gameId: string,
+  roundNumber: number,
+  playerId: string,
+  status: 'unique' | 'duplicate'
+) => {
+  try {
+    await ensureClueStatusesTable();
+    
+    const { data, error } = await supabase
+      .from('clue_statuses')
+      .upsert({
+        game_id: gameId,
+        round_number: roundNumber,
+        player_id: playerId,
+        status,
+        updated_at: new Date().toISOString()
+      })
+      .select();
+    
+    if (error) {
+      console.error('Error updating clue status:', error);
+      return false;
+    }
+    
+    console.log('Clue status updated for player:', playerId, data);
+    return true;
+  } catch (err) {
+    console.error('Exception updating clue status:', err);
+    return false;
+  }
+};
+
+export const getClueStatuses = async (gameId: string, roundNumber: number) => {
+  try {
+    const { data, error } = await supabase
+      .from('clue_statuses')
+      .select('*')
+      .eq('game_id', gameId)
+      .eq('round_number', roundNumber);
+    
+    if (error) {
+      console.error('Error fetching clue statuses:', error);
+      return [];
+    }
+    
+    return data || [];
+  } catch (err) {
+    console.error('Exception fetching clue statuses:', err);
+    return [];
+  }
+};
+
+// Add the missing clearClueStatuses function
+export const clearClueStatuses = async (gameId: string, roundNumber: number) => {
+  try {
+    console.log(`Clearing clue statuses for game ${gameId}, round ${roundNumber}`);
+    
+    await ensureClueStatusesTable();
+    
+    const { error } = await supabase
+      .from('clue_statuses')
+      .delete()
+      .eq('game_id', gameId)
+      .eq('round_number', roundNumber);
+    
+    if (error) {
+      console.error('Error clearing clue statuses:', error);
+      return false;
+    }
+    
+    console.log('Successfully cleared clue statuses');
+    return true;
+  } catch (err) {
+    console.error('Exception clearing clue statuses:', err);
+    return false;
+  }
 };
