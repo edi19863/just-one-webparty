@@ -158,21 +158,17 @@ const IRLClueWriterView = ({
   }, [round.roundNumber]);
 
   const handleClueStatusChange = (status: 'unique' | 'duplicate') => {
-    onUpdateClueStatus(clueStatus === status ? null : status);
+    onUpdateClueStatus(status);
   };
 
   const renderClueStatusButtons = () => {
     return (
-      <div className="flex justify-center gap-4 mt-6">
+      <div className="flex justify-center gap-4 mb-4">
         <Button
           variant="outline"
           size="lg"
           onClick={() => handleClueStatusChange('unique')}
-          className={`${
-            clueStatus === 'unique' 
-              ? 'bg-green-800/20 text-green-500 border-green-500' 
-              : 'text-gray-400'
-          } hover:bg-green-800/30 hover:text-green-500 w-full`}
+          className="text-gray-400 hover:bg-green-800/30 hover:text-green-500 w-full"
         >
           <Check className="mr-2 h-5 w-5" />
           Unico
@@ -182,11 +178,7 @@ const IRLClueWriterView = ({
           variant="outline"
           size="lg"
           onClick={() => handleClueStatusChange('duplicate')}
-          className={`${
-            clueStatus === 'duplicate' 
-              ? 'bg-red-800/20 text-red-500 border-red-500' 
-              : 'text-gray-400'
-          } hover:bg-red-800/30 hover:text-red-500 w-full`}
+          className="text-gray-400 hover:bg-red-800/30 hover:text-red-500 w-full"
         >
           <X className="mr-2 h-5 w-5" />
           Multiplo
@@ -262,6 +254,20 @@ const IRLClueWriterView = ({
               <p className="mt-2 text-sm">Non mostrare il tuo schermo all'indovino! ({round.guesserName})</p>
             </div>
             
+            <div className="text-center py-3">
+              <h3 className="text-xl font-bold mb-2">Confronto Indizi</h3>
+              <div className="p-4 bg-game-card border-game-border rounded-md">
+                <p>
+                  Tutti i giocatori hanno scritto i loro indizi!
+                </p>
+                <p className="mt-3 mb-2">
+                  Confrontate gli indizi tra voi. È il tuo indizio unico o un duplicato?
+                </p>
+              </div>
+            </div>
+            
+            {renderClueStatusButtons()}
+            
             <div className="text-center">
               <p className="mb-2">Il tuo indizio:</p>
               {cluePreview && clueStatus !== 'duplicate' ? (
@@ -290,19 +296,6 @@ const IRLClueWriterView = ({
                   </div>
                 </div>
               )}
-            </div>
-            
-            <div className="text-center py-3">
-              <h3 className="text-xl font-bold mb-2">Confronto Indizi</h3>
-              <div className="p-4 bg-game-card border-game-border rounded-md">
-                <p>
-                  Tutti i giocatori hanno scritto i loro indizi!
-                </p>
-                <p className="mt-3 mb-2">
-                  Confrontate gli indizi tra voi. È il tuo indizio unico o un duplicato?
-                </p>
-                {renderClueStatusButtons()}
-              </div>
             </div>
           </div>
         );

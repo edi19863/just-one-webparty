@@ -15,7 +15,7 @@ interface CreateGameProps {
 const CreateGame = ({ onCreateGame }: CreateGameProps) => {
   const [nickname, setNickname] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const [gameMode, setGameMode] = useState<GameMode>(GameMode.ONLINE);
+  const [gameMode, setGameMode] = useState<GameMode>(GameMode.IRL); // Changed default to IRL
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {

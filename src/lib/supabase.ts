@@ -1,3 +1,4 @@
+
 import { createClient } from '@supabase/supabase-js';
 import { Game, ClueStatus } from '@/types/game';
 import { GameMode } from '@/types/game';
@@ -17,59 +18,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     }
   }
 });
-
-// Ensure clue_statuses table exists
-export const ensureClueStatusesTable = async () => {
-  try {
-    console.log('Ensuring clue_statuses table exists...');
-    
-    // Try to query the table to see if it exists
-    const { error: checkError } = await supabase
-      .from('clue_statuses')
-      .select('count(*)')
-      .limit(1)
-      .single();
-      
-    if (checkError && checkError.message.includes('does not exist')) {
-      console.log('Table does not exist, creating it...');
-      
-      // If the table doesn't exist, create it manually
-      const { error: createError } = await supabase.rpc('create_clue_statuses_table');
-      
-      if (createError) {
-        console.error('Error creating table via RPC:', createError);
-        
-        // Fall back to direct SQL (this may not work in some environments)
-        const { error: sqlError } = await supabase.query(`
-          CREATE TABLE IF NOT EXISTS public.clue_statuses (
-            id SERIAL PRIMARY KEY,
-            game_id TEXT NOT NULL,
-            round_number INTEGER NOT NULL,
-            player_id TEXT NOT NULL,
-            status TEXT NOT NULL,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            UNIQUE(game_id, round_number, player_id)
-          );
-        `);
-        
-        if (sqlError) {
-          console.error('Error creating table via SQL:', sqlError);
-          return false;
-        }
-      }
-      
-      console.log('Table created successfully');
-    } else {
-      console.log('Table already exists');
-    }
-    
-    return true;
-  } catch (err) {
-    console.error('Exception ensuring clue_statuses table:', err);
-    return false;
-  }
-};
 
 // Game functions
 export const getGameByCode = async (code: string) => {
@@ -225,15 +173,7 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
   return channel;
 };
 
-// Add table initialization call when first loading
-export const initializeSupabaseTables = async () => {
-  console.log('Initializing Supabase tables...');
-  const success = await ensureClueStatusesTable();
-  console.log('Supabase tables initialized:', success ? 'success' : 'failed');
-  return success;
-};
-
-// Clue status functions
+// Clue status functions - now storing in the game object directly
 export const updateClueStatus = async (
   gameId: string,
   roundNumber: number,
@@ -241,26 +181,32 @@ export const updateClueStatus = async (
   status: 'unique' | 'duplicate'
 ) => {
   try {
-    await ensureClueStatusesTable();
-    
-    const { data, error } = await supabase
-      .from('clue_statuses')
-      .upsert({
-        game_id: gameId,
-        round_number: roundNumber,
-        player_id: playerId,
-        status,
-        updated_at: new Date().toISOString()
-      })
-      .select();
-    
-    if (error) {
-      console.error('Error updating clue status:', error);
+    // Get the current game
+    const game = await getGameById(gameId);
+    if (!game) {
+      console.error('Game not found when trying to update clue status');
       return false;
     }
     
-    console.log('Clue status updated for player:', playerId, data);
-    return true;
+    // Update clue_statuses map if it doesn't exist yet
+    if (!game.clue_statuses) {
+      game.clue_statuses = {};
+    }
+    
+    // Create a round key
+    const roundKey = `round_${roundNumber}`;
+    if (!game.clue_statuses[roundKey]) {
+      game.clue_statuses[roundKey] = {};
+    }
+    
+    // Update the player's status
+    game.clue_statuses[roundKey][playerId] = status;
+    
+    // Save back to database
+    const updatedGame = await updateGameInDb(game);
+    
+    console.log('Clue status updated for player:', playerId, status);
+    return !!updatedGame;
   } catch (err) {
     console.error('Exception updating clue status:', err);
     return false;
@@ -269,18 +215,22 @@ export const updateClueStatus = async (
 
 export const getClueStatuses = async (gameId: string, roundNumber: number) => {
   try {
-    const { data, error } = await supabase
-      .from('clue_statuses')
-      .select('*')
-      .eq('game_id', gameId)
-      .eq('round_number', roundNumber);
-    
-    if (error) {
-      console.error('Error fetching clue statuses:', error);
+    const game = await getGameById(gameId);
+    if (!game || !game.clue_statuses) {
       return [];
     }
     
-    return data || [];
+    const roundKey = `round_${roundNumber}`;
+    const roundStatuses = game.clue_statuses[roundKey] || {};
+    
+    // Convert to array format for compatibility with existing code
+    return Object.entries(roundStatuses).map(([player_id, status]) => ({
+      game_id: gameId,
+      round_number: roundNumber,
+      player_id,
+      status,
+      updated_at: new Date().toISOString()
+    }));
   } catch (err) {
     console.error('Exception fetching clue statuses:', err);
     return [];
@@ -292,28 +242,32 @@ export const clearClueStatuses = async (gameId: string, roundNumber: number) => 
   try {
     console.log(`Clearing clue statuses for game ${gameId}, round ${roundNumber}`);
     
-    await ensureClueStatusesTable();
-    
-    const { error } = await supabase
-      .from('clue_statuses')
-      .delete()
-      .eq('game_id', gameId)
-      .eq('round_number', roundNumber);
-    
-    if (error) {
-      console.error('Error clearing clue statuses:', error);
+    const game = await getGameById(gameId);
+    if (!game) {
+      console.error('Game not found when trying to clear clue statuses');
       return false;
     }
     
-    console.log('Successfully cleared clue statuses');
-    return true;
+    if (game.clue_statuses) {
+      const roundKey = `round_${roundNumber}`;
+      if (game.clue_statuses[roundKey]) {
+        delete game.clue_statuses[roundKey];
+        
+        // Save back to database
+        const updatedGame = await updateGameInDb(game);
+        console.log('Successfully cleared clue statuses');
+        return !!updatedGame;
+      }
+    }
+    
+    return true; // Nothing to clear
   } catch (err) {
     console.error('Exception clearing clue statuses:', err);
     return false;
   }
 };
 
-// Add the missing subscribeToClueStatuses function
+// Add the subscribeToClueStatuses function that will listen to game updates instead
 export const subscribeToClueStatuses = (gameId: string, callback: () => void) => {
   const channelName = `clue-status-updates:${gameId}`;
   
@@ -329,7 +283,7 @@ export const subscribeToClueStatuses = (gameId: string, callback: () => void) =>
     }
   }
   
-  // Create a new subscription with enhanced options
+  // Create a new subscription with enhanced options - listening to games table
   const channel = supabase
     .channel(channelName, {
       config: {
@@ -346,12 +300,17 @@ export const subscribeToClueStatuses = (gameId: string, callback: () => void) =>
       {
         event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
         schema: 'public',
-        table: 'clue_statuses',
-        filter: `game_id=eq.${gameId}`
+        table: 'games',
+        filter: `id=eq.${gameId}`
       },
       (payload) => {
-        console.log(`Received real-time clue status update for game ${gameId}:`, payload);
-        callback();
+        console.log(`Received real-time game update that may affect clue statuses:`, payload);
+        // Check if the clue_statuses field has changed
+        if (payload.new && payload.old && 
+            JSON.stringify(payload.new.clue_statuses) !== JSON.stringify(payload.old.clue_statuses)) {
+          console.log('Clue statuses have changed, triggering callback');
+          callback();
+        }
       }
     )
     .subscribe((status, err) => {
@@ -370,10 +329,10 @@ export const subscribeToClueStatuses = (gameId: string, callback: () => void) =>
               .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
-                table: 'clue_statuses',
-                filter: `game_id=eq.${gameId}`
+                table: 'games',
+                filter: `id=eq.${gameId}`
               }, (payload) => {
-                console.log(`Received real-time clue status update for game ${gameId}:`, payload);
+                console.log(`Received real-time game update that may affect clue statuses:`, payload);
                 callback();
               })
               .subscribe();
