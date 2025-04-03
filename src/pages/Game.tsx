@@ -15,10 +15,8 @@ const Game = () => {
   const [loadAttempts, setLoadAttempts] = useState(0);
   const [tablesInitialized, setTablesInitialized] = useState(false);
   
-  // Get the stored player ID for this specific game
   const storedPlayerId = gameId ? localStorage.getItem(`player_id_${gameId}`) : null;
   
-  // Initialize Supabase tables
   useEffect(() => {
     const init = async () => {
       console.log("Initializing Supabase tables...");
@@ -50,7 +48,6 @@ const Game = () => {
     playerId: storedPlayerId || undefined,
   });
 
-  // Handle initial load
   useEffect(() => {
     if (!initialLoadComplete && !loading) {
       console.log("Caricamento iniziale del gioco completato:", gameState?.id);
@@ -58,7 +55,6 @@ const Game = () => {
     }
   }, [loading, initialLoadComplete, gameState]);
 
-  // Monitor load attempts
   useEffect(() => {
     let loadInterval: number | undefined;
     
@@ -79,7 +75,6 @@ const Game = () => {
     };
   }, [loading]);
 
-  // Save player ID to localStorage whenever it changes
   useEffect(() => {
     if (gameId && playerId) {
       console.log(`Salvataggio ID giocatore ${playerId} per il gioco ${gameId}`);
@@ -88,12 +83,10 @@ const Game = () => {
     }
   }, [gameId, playerId]);
   
-  // Handle errors
   useEffect(() => {
     if (error && initialLoadComplete) {
       console.error("Errore di gioco:", error);
       
-      // Clear localStorage for this game to prevent loop
       if (gameId) {
         console.log(`Pulizia localStorage per il gioco ${gameId} a causa di un errore`);
         localStorage.removeItem(`player_id_${gameId}`);
@@ -102,19 +95,16 @@ const Game = () => {
       
       toast.error("Errore nel caricamento del gioco - ritorno alla home");
       
-      // Give a brief moment to see the toast before navigating
       setTimeout(() => {
         navigate("/", { replace: true });
       }, 1500);
     }
   }, [error, navigate, initialLoadComplete, gameId]);
   
-  // Check if player exists in the game
   useEffect(() => {
     if (initialLoadComplete && !loading && gameState && playerId && !currentPlayer) {
       console.log("Giocatore non trovato nel gioco:", playerId);
       
-      // Clear localStorage for this game
       if (gameId) {
         localStorage.removeItem(`player_id_${gameId}`);
       }
@@ -125,12 +115,10 @@ const Game = () => {
     }
   }, [loading, gameState, playerId, currentPlayer, gameId, navigate, initialLoadComplete]);
 
-  // Handle too many load attempts
   useEffect(() => {
     if (loadAttempts >= 10 && loading) {
       console.error("Troppi tentativi di caricamento, il gioco sembra inaccessibile");
       
-      // Clear localStorage to break potential loops
       if (gameId) {
         localStorage.removeItem(`player_id_${gameId}`);
       }
@@ -169,7 +157,6 @@ const Game = () => {
           <h2 className="text-2xl font-bold text-game-error mb-4">Gioco non trovato</h2>
           <button 
             onClick={() => {
-              // Clear localStorage before returning to home
               if (gameId) {
                 localStorage.removeItem(`player_id_${gameId}`);
               }
@@ -192,7 +179,6 @@ const Game = () => {
           <h2 className="text-2xl font-bold text-game-error mb-4">Non fai parte di questo gioco</h2>
           <button 
             onClick={() => {
-              // Clear localStorage before returning to home
               if (gameId) {
                 localStorage.removeItem(`player_id_${gameId}`);
               }
