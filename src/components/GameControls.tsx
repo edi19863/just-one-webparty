@@ -11,7 +11,7 @@ interface GameControlsProps {
 const GameControls = ({ game, isHost, onStartNextRound }: GameControlsProps) => {
   if (!isHost) return null;
   
-  // Hide the button during the GUESSING and REVIEWING_CLUES phases in IRL mode 
+  // Hide the button during the GUESSING, REVIEWING_CLUES and SUBMITTING_CLUES phases in IRL mode 
   // Only show it in the LOBBY or ROUND_RESULT states
   const shouldShowButton = 
     game.status === GameStatus.LOBBY || 

@@ -4,7 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GameStatus, Round, ClueStatus } from "@/types/game";
 import { CheckCircle, Eraser, Check, X } from "lucide-react";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface IRLClueWriterViewProps {
   round: Round;
@@ -173,82 +172,55 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     }
   };
 
-  const toggleClueStatus = (playerId: string) => {
+  const toggleClueStatus = (playerId: string, newStatus: 'unique' | 'duplicate') => {
     setClueStatuses(prev => 
       prev.map(clueStatus => 
         clueStatus.playerId === playerId
-          ? { 
-              ...clueStatus, 
-              status: clueStatus.status === 'undecided' 
-                ? 'unique' 
-                : clueStatus.status === 'unique' 
-                  ? 'duplicate' 
-                  : 'undecided' 
-            }
+          ? { ...clueStatus, status: newStatus }
           : clueStatus
       )
     );
   };
 
-  const renderClueStatusTable = () => {
+  const renderClueStatusButtons = () => {
     if (clueStatuses.length === 0) return null;
 
     return (
-      <div className="mt-6 rounded-md overflow-hidden border border-gray-600">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-white">Giocatore</TableHead>
-              <TableHead className="text-white">Stato</TableHead>
-              <TableHead className="text-white">Azione</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {clueStatuses.map((clueStatus) => (
-              <TableRow 
-                key={clueStatus.playerId}
-                className={
+      <div className="space-y-4 mt-4">
+        {clueStatuses.map((clueStatus) => (
+          <div key={clueStatus.playerId} className="flex items-center justify-between border p-3 rounded-lg bg-game-card/40">
+            <div className="font-medium">{clueStatus.playerName}</div>
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleClueStatus(clueStatus.playerId, 'unique')}
+                className={`${
                   clueStatus.status === 'unique' 
-                    ? 'bg-green-900/20' 
-                    : clueStatus.status === 'duplicate' 
-                      ? 'bg-red-900/20' 
-                      : ''
-                }
+                    ? 'bg-green-800/20 text-green-500' 
+                    : 'text-gray-400'
+                } hover:bg-green-800/30 hover:text-green-500`}
               >
-                <TableCell>{clueStatus.playerName}</TableCell>
-                <TableCell>
-                  {clueStatus.status === 'unique' && (
-                    <span className="text-green-500 flex items-center">
-                      <Check className="h-4 w-4 mr-1" />Unico
-                    </span>
-                  )}
-                  {clueStatus.status === 'duplicate' && (
-                    <span className="text-red-500 flex items-center">
-                      <X className="h-4 w-4 mr-1" />Multiplo
-                    </span>
-                  )}
-                  {clueStatus.status === 'undecided' && 'Non deciso'}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleClueStatus(clueStatus.playerId)}
-                    className={
-                      clueStatus.status === 'unique' 
-                        ? 'text-green-500 hover:text-green-600 hover:bg-green-900/20' 
-                        : clueStatus.status === 'duplicate' 
-                          ? 'text-red-500 hover:text-red-600 hover:bg-red-900/20' 
-                          : 'hover:bg-gray-700'
-                    }
-                  >
-                    Cambia stato
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+                <Check className="mr-1 h-4 w-4" />
+                Unico
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => toggleClueStatus(clueStatus.playerId, 'duplicate')}
+                className={`${
+                  clueStatus.status === 'duplicate' 
+                    ? 'bg-red-800/20 text-red-500' 
+                    : 'text-gray-400'
+                } hover:bg-red-800/30 hover:text-red-500`}
+              >
+                <X className="mr-1 h-4 w-4" />
+                Multiplo
+              </Button>
+            </div>
+          </div>
+        ))}
       </div>
     );
   };
@@ -332,10 +304,9 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
                 </div>
               ) : (
                 <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
-                  <canvas
-                    ref={canvasRef}
-                    className="touch-none w-full h-64 pointer-events-none"
-                  />
+                  <div className="w-full h-64 flex items-center justify-center text-gray-400">
+                    Nessuna anteprima disponibile
+                  </div>
                 </div>
               )}
             </div>
@@ -349,7 +320,7 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
                 <p className="mt-3">
                   Confrontate gli indizi tra voi e indicate quali sono unici e quali sono duplicati:
                 </p>
-                {renderClueStatusTable()}
+                {renderClueStatusButtons()}
               </div>
             </div>
           </div>
@@ -376,10 +347,9 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
                 </div>
               ) : (
                 <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
-                  <canvas
-                    ref={canvasRef}
-                    className="touch-none w-full h-64 pointer-events-none"
-                  />
+                  <div className="w-full h-64 flex items-center justify-center text-gray-400">
+                    Nessuna anteprima disponibile
+                  </div>
                 </div>
               )}
             </div>
