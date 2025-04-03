@@ -11,7 +11,7 @@ interface PlayerListProps {
 const PlayerList = ({ players, currentPlayerId, game }: PlayerListProps) => {
   
   const getPlayerStatus = (playerId: string) => {
-    if (!game.current_round) {
+    if (!game || !game.current_round) {
       return null;
     }
     
@@ -33,32 +33,26 @@ const PlayerList = ({ players, currentPlayerId, game }: PlayerListProps) => {
       // In reviewing or guessing phase, check if they've marked their clue status
       const clueStatus = localStorage.getItem(`clue_status_${game.current_round.roundNumber}`);
       
-      if (game.status === "reviewing_clues" || game.status === "guessing") {
-        if (clueStatus === "unique" && playerId === currentPlayerId) {
+      if ((game.status === "reviewing_clues" || game.status === "guessing") && playerId === currentPlayerId) {
+        if (clueStatus === "unique") {
           return {
             text: "Indizio unico",
             color: "bg-green-900/70",
             icon: <Check size={14} className="mr-1" />
           };
         }
-        if (clueStatus === "duplicate" && playerId === currentPlayerId) {
+        if (clueStatus === "duplicate") {
           return {
             text: "Indizio multiplo",
             color: "bg-red-900/70",
             icon: <Check size={14} className="mr-1" />
           };
         }
-        
-        return {
-          text: "Indizio inviato",
-          color: "bg-blue-900/70",
-          icon: <Check size={14} className="mr-1" />
-        };
       }
       
       return {
         text: "Indizio inviato",
-        color: "bg-green-900/70",
+        color: "bg-blue-900/70",
         icon: <Check size={14} className="mr-1" />
       };
     }
