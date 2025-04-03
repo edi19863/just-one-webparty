@@ -1,5 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
-import { Game } from '@/types/game';
+import { Game, ClueStatus } from '@/types/game';
 import { GameMode } from '@/types/game';
 
 const supabaseUrl = 'https://tqvnpmhfavjiqxplutwk.supabase.co';
@@ -17,6 +17,37 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     }
   }
 });
+
+// Ensure clue_statuses table exists
+export const ensureClueStatusesTable = async () => {
+  try {
+    const { error } = await supabase.rpc('ensure_clue_statuses_table');
+    
+    if (error) {
+      console.error('Error ensuring clue_statuses table:', error);
+      
+      // Fallback: create the table manually if RPC fails
+      await supabase.query(`
+        CREATE TABLE IF NOT EXISTS clue_statuses (
+          id SERIAL PRIMARY KEY,
+          game_id TEXT NOT NULL,
+          round_number INTEGER NOT NULL,
+          player_id TEXT NOT NULL,
+          status TEXT NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+          UNIQUE(game_id, round_number, player_id)
+        );
+      `);
+    }
+    
+    console.log('Ensured clue_statuses table exists');
+    return true;
+  } catch (err) {
+    console.error('Exception ensuring clue_statuses table:', err);
+    return false;
+  }
+};
 
 // Game functions
 export const getGameByCode = async (code: string) => {
@@ -170,4 +201,10 @@ export const subscribeToGame = (gameId: string, callback: (game: Game) => void) 
     });
   
   return channel;
+};
+
+// Add table initialization call when first loading
+export const initializeSupabaseTables = async () => {
+  await ensureClueStatusesTable();
+  console.log('Supabase tables initialized');
 };

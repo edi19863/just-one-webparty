@@ -7,6 +7,7 @@ import Lobby from "@/components/Lobby";
 import GameRoom from "@/components/GameRoom";
 import { GameStatus, GameMode } from "@/types/game";
 import { toast } from "sonner";
+import { initializeSupabaseTables } from "@/lib/supabase";
 
 const Game = () => {
   const { id: gameId } = useParams<{ id: string }>();
@@ -16,6 +17,14 @@ const Game = () => {
   
   // Get the stored player ID for this specific game
   const storedPlayerId = gameId ? localStorage.getItem(`player_id_${gameId}`) : null;
+  
+  // Initialize Supabase tables
+  useEffect(() => {
+    const init = async () => {
+      await initializeSupabaseTables();
+    };
+    init();
+  }, []);
   
   const {
     gameState,
@@ -28,7 +37,10 @@ const Game = () => {
     submitClue,
     submitGuess,
     markClueWritten,
-    updateGuessResult
+    updateGuessResult,
+    updatePlayerClueStatus,
+    getPlayerClueStatus,
+    areAllClueStatusesSelected
   } = useGameState({
     gameId,
     playerId: storedPlayerId || undefined,

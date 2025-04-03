@@ -6,9 +6,10 @@ interface PlayerListProps {
   players: Player[];
   currentPlayerId?: string | null;
   game: any; // Using any because we need just specific parts
+  clueStatuses?: ((playerId: string) => 'unique' | 'duplicate' | null) | null;
 }
 
-const PlayerList = ({ players, currentPlayerId, game }: PlayerListProps) => {
+const PlayerList = ({ players, currentPlayerId, game, clueStatuses }: PlayerListProps) => {
   
   const getPlayerStatus = (playerId: string) => {
     if (!game || !game.current_round) {
@@ -30,25 +31,18 @@ const PlayerList = ({ players, currentPlayerId, game }: PlayerListProps) => {
     );
     
     if (hasSubmittedClue) {
-      // In reviewing or guessing phase, check if they've marked their clue status
-      // Use player-specific storage key
-      const clueStatusKey = `clue_status_${game.current_round.roundNumber}_${playerId}`;
-      // For backward compatibility
-      const fallbackKey = playerId === currentPlayerId ? 
-        `clue_status_${game.current_round.roundNumber}` : null;
-      
-      const clueStatus = localStorage.getItem(clueStatusKey) || 
-                         (fallbackKey ? localStorage.getItem(fallbackKey) : null);
-      
-      if ((game.status === "reviewing_clues" || game.status === "guessing")) {
-        if (clueStatus === "unique") {
+      // Check if they've marked their clue status using Supabase
+      if (clueStatuses && (game.status === "reviewing_clues" || game.status === "guessing")) {
+        const status = clueStatuses(playerId);
+        
+        if (status === "unique") {
           return {
             text: "Indizio unico",
             color: "bg-green-900/70",
             icon: <Check size={14} className="mr-1" />
           };
         }
-        if (clueStatus === "duplicate") {
+        if (status === "duplicate") {
           return {
             text: "Indizio multiplo",
             color: "bg-red-900/70",

@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Game, GameStatus } from "@/types/game";
 import PlayerList from "./PlayerList";
 import IRLGuesserView from "./IRLGuesserView";
@@ -14,6 +14,10 @@ interface IRLGameRoomProps {
   onMarkClueWritten: () => void;
   onUpdateGuessResult: (isCorrect: boolean) => void;
   onStartRound: () => void;
+  onUpdateClueStatus: (status: 'unique' | 'duplicate') => void;
+  clueStatuses: any[];
+  getPlayerClueStatus: (playerId: string) => 'unique' | 'duplicate' | null;
+  areAllClueStatusesSelected: () => boolean;
 }
 
 const IRLGameRoom = ({
@@ -21,58 +25,19 @@ const IRLGameRoom = ({
   currentPlayerId,
   onMarkClueWritten,
   onUpdateGuessResult,
-  onStartRound
+  onStartRound,
+  onUpdateClueStatus,
+  getPlayerClueStatus,
+  areAllClueStatusesSelected
 }: IRLGameRoomProps) => {
   const currentPlayer = game.players.find(p => p.id === currentPlayerId);
   const isHost = currentPlayerId === game.host_id;
   const isGuesser = currentPlayer?.isGuesser || false;
-  const [allCluesStatusSelected, setAllCluesStatusSelected] = useState(false);
   
   // Check if the current player has submitted their clue in the current round
   const hasSubmittedClue = game.current_round?.clues.some(
     clue => clue.playerId === currentPlayerId
   ) || false;
-  
-  // Check if all players have selected a status for their clues
-  useEffect(() => {
-    if (game.status !== GameStatus.REVIEWING_CLUES && 
-        game.status !== GameStatus.GUESSING) {
-      setAllCluesStatusSelected(false);
-      return;
-    }
-    
-    if (!game.current_round) {
-      setAllCluesStatusSelected(false);
-      return;
-    }
-    
-    // Get all non-guesser players who have submitted clues
-    const nonGuesserPlayers = game.players.filter(
-      player => player.id !== game.current_round?.guesserId && 
-                game.current_round?.clues.some(clue => clue.playerId === player.id)
-    );
-    
-    // If there are no non-guesser players, don't block the guess buttons
-    if (nonGuesserPlayers.length === 0) {
-      setAllCluesStatusSelected(true);
-      return;
-    }
-    
-    // Check if all players have selected their clue status
-    let allSelected = true;
-    
-    for (const player of nonGuesserPlayers) {
-      const storageKey = `clue_status_${game.current_round.roundNumber}_${player.id}`;
-      const status = localStorage.getItem(storageKey);
-      
-      if (!status || (status !== 'unique' && status !== 'duplicate')) {
-        allSelected = false;
-        break;
-      }
-    }
-    
-    setAllCluesStatusSelected(allSelected);
-  }, [game.status, game.current_round, game.players]);
   
   const renderGameContent = () => {
     switch (game.status) {
@@ -103,7 +68,7 @@ const IRLGameRoom = ({
               round={game.current_round}
               status={game.status}
               onUpdateGuessResult={onUpdateGuessResult}
-              allCluesStatusSelected={allCluesStatusSelected}
+              allCluesStatusSelected={areAllClueStatusesSelected()}
             />
           );
         } else {
@@ -113,6 +78,8 @@ const IRLGameRoom = ({
               status={game.status}
               onMarkClueWritten={onMarkClueWritten}
               hasSubmitted={hasSubmittedClue}
+              onUpdateClueStatus={onUpdateClueStatus}
+              clueStatus={currentPlayerId ? getPlayerClueStatus(currentPlayerId) : null}
             />
           );
         }
@@ -132,22 +99,6 @@ const IRLGameRoom = ({
     }
   };
   
-  // Clear clue statuses when a new round starts
-  useEffect(() => {
-    if (game.status === GameStatus.ROUND_RESULT) {
-      // When a round ends, we prepare for the next round by clearing status
-      const roundNumber = game.current_round?.roundNumber;
-      if (roundNumber) {
-        // Clear individual player status entries
-        game.players.forEach(player => {
-          localStorage.removeItem(`clue_status_${roundNumber}_${player.id}`);
-        });
-        // Also clear the old format for backward compatibility
-        localStorage.removeItem(`clue_status_${roundNumber}`);
-      }
-    }
-  }, [game.status, game.current_round, game.players]);
-  
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
@@ -155,6 +106,7 @@ const IRLGameRoom = ({
           players={game.players} 
           currentPlayerId={currentPlayerId}
           game={game} 
+          clueStatuses={game.current_round ? getPlayerClueStatus : null}
         />
       </div>
       

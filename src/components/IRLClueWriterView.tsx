@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { GameStatus, Round, ClueStatus } from "@/types/game";
+import { GameStatus, Round } from "@/types/game";
 import { CheckCircle, Eraser, Check, X } from "lucide-react";
 
 interface IRLClueWriterViewProps {
@@ -9,17 +9,23 @@ interface IRLClueWriterViewProps {
   status: GameStatus;
   onMarkClueWritten: () => void;
   hasSubmitted: boolean;
+  onUpdateClueStatus: (status: 'unique' | 'duplicate' | null) => void;
+  clueStatus: 'unique' | 'duplicate' | null;
 }
 
-const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: IRLClueWriterViewProps) => {
+const IRLClueWriterView = ({ 
+  round, 
+  status, 
+  onMarkClueWritten, 
+  hasSubmitted,
+  onUpdateClueStatus,
+  clueStatus
+}: IRLClueWriterViewProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [clueStatus, setClueStatus] = useState<'unique' | 'duplicate' | 'undecided'>('undecided');
   const [cluePreview, setCluePreview] = useState<string | null>(null);
-  
-  const playerId = localStorage.getItem(`player_id_${round.roundNumber}`) || '';
   
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -63,20 +69,6 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  useEffect(() => {
-    const playerId = localStorage.getItem(`player_id_${round.roundNumber}`) || '';
-    const storageKey = `clue_status_${round.roundNumber}_${playerId}`;
-    const backupKey = `clue_status_${round.roundNumber}`;
-    
-    const savedStatus = localStorage.getItem(storageKey) || localStorage.getItem(backupKey);
-    
-    if (savedStatus && (savedStatus === 'unique' || savedStatus === 'duplicate')) {
-      setClueStatus(savedStatus);
-    } else {
-      setClueStatus('undecided');
-    }
-  }, [round.roundNumber]);
   
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!context) return;
@@ -166,18 +158,7 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
   }, [round.roundNumber]);
 
   const handleClueStatusChange = (status: 'unique' | 'duplicate') => {
-    const playerId = localStorage.getItem(`current_game_id`) ? 
-      localStorage.getItem(`player_id_${localStorage.getItem(`current_game_id`)}`) : '';
-    
-    const storageKey = `clue_status_${round.roundNumber}_${playerId}`;
-    
-    if (clueStatus === status) {
-      setClueStatus('undecided');
-      localStorage.removeItem(storageKey);
-    } else {
-      setClueStatus(status);
-      localStorage.setItem(storageKey, status);
-    }
+    onUpdateClueStatus(clueStatus === status ? null : status);
   };
 
   const renderClueStatusButtons = () => {

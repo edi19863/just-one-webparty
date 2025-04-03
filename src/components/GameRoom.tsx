@@ -1,3 +1,4 @@
+
 import { useEffect } from "react";
 import { Game, GameStatus, GameMode } from "@/types/game";
 import PlayerList from "./PlayerList";
@@ -17,6 +18,10 @@ interface GameRoomProps {
   onStartRound: () => void;
   onMarkClueWritten?: () => void;
   onUpdateGuessResult?: (isCorrect: boolean) => void;
+  onUpdateClueStatus?: (status: 'unique' | 'duplicate') => void;
+  clueStatuses?: any[];
+  getPlayerClueStatus?: (playerId: string) => 'unique' | 'duplicate' | null;
+  areAllClueStatusesSelected?: () => boolean;
 }
 
 const GameRoom = ({ 
@@ -26,10 +31,18 @@ const GameRoom = ({
   onSubmitGuess, 
   onStartRound,
   onMarkClueWritten,
-  onUpdateGuessResult
+  onUpdateGuessResult,
+  onUpdateClueStatus,
+  getPlayerClueStatus,
+  areAllClueStatusesSelected
 }: GameRoomProps) => {
   // If this is an IRL game and we have the IRL-specific handlers, use the IRL game room
-  if (game.mode === GameMode.IRL && onMarkClueWritten && onUpdateGuessResult) {
+  if (game.mode === GameMode.IRL && 
+      onMarkClueWritten && 
+      onUpdateGuessResult && 
+      onUpdateClueStatus && 
+      getPlayerClueStatus && 
+      areAllClueStatusesSelected) {
     return (
       <IRLGameRoom
         game={game}
@@ -37,6 +50,9 @@ const GameRoom = ({
         onMarkClueWritten={onMarkClueWritten}
         onUpdateGuessResult={onUpdateGuessResult}
         onStartRound={onStartRound}
+        onUpdateClueStatus={onUpdateClueStatus}
+        getPlayerClueStatus={getPlayerClueStatus}
+        areAllClueStatusesSelected={areAllClueStatusesSelected}
       />
     );
   }
@@ -160,7 +176,12 @@ const GameRoom = ({
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
-        <PlayerList players={game.players} currentPlayerId={currentPlayerId} />
+        <PlayerList 
+          players={game.players} 
+          currentPlayerId={currentPlayerId}
+          game={game}
+          clueStatuses={null}
+        />
       </div>
       
       {/* Mostra i risultati parziali se ci sono turni completati e non siamo nella schermata del risultato */}

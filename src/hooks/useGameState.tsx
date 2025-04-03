@@ -9,6 +9,9 @@ import {
   getGameByCode, 
   createGameInDb, 
   updateGameInDb,
+  updateClueStatus,
+  getClueStatuses,
+  clearClueStatuses,
   subscribeToGame 
 } from '@/lib/supabase';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -23,8 +26,10 @@ export const useGameState = (options?: UseGameStateOptions) => {
   const [playerId, setPlayerId] = useState<string | null>(options?.playerId || null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [clueStatuses, setClueStatuses] = useState<any[]>([]);
   const { toast } = useToast();
   const supabaseChannelRef = useRef<RealtimeChannel | null>(null);
+  const statusChannelRef = useRef<RealtimeChannel | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
 
   const loadGameState = useCallback(async (gameId: string) => {
@@ -136,6 +141,10 @@ export const useGameState = (options?: UseGameStateOptions) => {
 
   const startRound = useCallback(async () => {
     if (!gameState) return;
+    
+    if (gameState.current_round) {
+      await clearClueStatuses(gameState.id, gameState.current_round.roundNumber);
+    }
     
     const updatedGame = gameUtils.startNewRound(gameState);
     const savedGame = await updateGameInDb(updatedGame);
@@ -279,6 +288,33 @@ export const useGameState = (options?: UseGameStateOptions) => {
     sonnerToast.info('You have left the game');
   }, [gameState, playerId]);
 
+  const updatePlayerClueStatus = useCallback(async (status: 'unique' | 'duplicate') => {
+    if (!gameState || !playerId || !gameState.current_round) return;
+    
+    const result = await updateClueStatus(
+      gameState.id,
+      gameState.current_round.roundNumber,
+      playerId,
+      status
+    );
+    
+    if (result) {
+      const updatedStatuses = await getClueStatuses(gameState.id, gameState.current_round.roundNumber);
+      setClueStatuses(updatedStatuses);
+      return true;
+    }
+    
+    return false;
+  }, [gameState, playerId]);
+
+  const loadClueStatuses = useCallback(async () => {
+    if (!gameState || !gameState.current_round) return;
+    
+    const statuses = await getClueStatuses(gameState.id, gameState.current_round.roundNumber);
+    console.log('Loaded clue statuses:', statuses);
+    setClueStatuses(statuses);
+  }, [gameState]);
+
   useEffect(() => {
     let pollInterval: number | undefined;
     
@@ -347,12 +383,79 @@ export const useGameState = (options?: UseGameStateOptions) => {
 
   const currentPlayer = gameState?.players.find(p => p.id === playerId) || null;
 
+  const areAllClueStatusesSelected = useCallback(() => {
+    if (!gameState || !gameState.current_round || !clueStatuses.length) return false;
+
+    const clueSubmitters = gameState.current_round.clues
+      .map(clue => clue.playerId)
+      .filter(id => id !== gameState.current_round?.guesserId);
+
+    return clueSubmitters.every(submitterId => 
+      clueStatuses.some(status => 
+        status.player_id === submitterId && 
+        (status.status === 'unique' || status.status === 'duplicate')
+      )
+    );
+  }, [gameState, clueStatuses]);
+
+  const getPlayerClueStatus = useCallback((playerId: string) => {
+    if (!clueStatuses.length) return null;
+    
+    const playerStatus = clueStatuses.find(status => status.player_id === playerId);
+    return playerStatus ? playerStatus.status : null;
+  }, [clueStatuses]);
+
+  useEffect(() => {
+    if (!gameState?.id || !gameState.current_round) return;
+    
+    if (statusChannelRef.current) {
+      statusChannelRef.current.unsubscribe();
+      statusChannelRef.current = null;
+    }
+    
+    const channelName = `clue-status-updates:${gameState.id}`;
+    console.log(`Setting up subscription for clue statuses on channel ${channelName}`);
+    
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'clue_statuses',
+          filter: `game_id=eq.${gameState.id}`
+        },
+        async () => {
+          const updatedStatuses = await getClueStatuses(
+            gameState.id, 
+            gameState.current_round!.roundNumber
+          );
+          console.log('Real-time update for clue statuses:', updatedStatuses);
+          setClueStatuses(updatedStatuses);
+        }
+      )
+      .subscribe();
+    
+    statusChannelRef.current = channel;
+    
+    loadClueStatuses();
+    
+    return () => {
+      if (statusChannelRef.current) {
+        statusChannelRef.current.unsubscribe();
+        statusChannelRef.current = null;
+      }
+    };
+  }, [gameState?.id, gameState?.current_round?.roundNumber, loadClueStatuses]);
+
   return {
     gameState,
     playerId,
     currentPlayer,
     loading,
     error,
+    clueStatuses,
     createGame,
     joinGame,
     startRound,
@@ -360,6 +463,9 @@ export const useGameState = (options?: UseGameStateOptions) => {
     submitGuess,
     markClueWritten,
     updateGuessResult,
+    updatePlayerClueStatus,
+    getPlayerClueStatus,
+    areAllClueStatusesSelected,
     leaveGame
   };
 };
