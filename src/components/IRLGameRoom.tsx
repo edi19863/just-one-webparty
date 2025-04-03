@@ -46,17 +46,32 @@ const IRLGameRoom = ({
       return;
     }
     
-    // Get all non-guesser players
+    // Get all non-guesser players who have submitted clues
     const nonGuesserPlayers = game.players.filter(
-      player => player.id !== game.current_round?.guesserId
+      player => player.id !== game.current_round?.guesserId && 
+                game.current_round?.clues.some(clue => clue.playerId === player.id)
     );
     
-    // Check if at least one player has marked their clue status
-    // This is a simplification - ideally we'd check each player's status
-    const storageKey = `clue_status_${game.current_round.roundNumber}`;
-    const hasStatus = localStorage.getItem(storageKey) !== null;
+    // If there are no non-guesser players, don't block the guess buttons
+    if (nonGuesserPlayers.length === 0) {
+      setAllCluesStatusSelected(true);
+      return;
+    }
     
-    setAllCluesStatusSelected(hasStatus);
+    // Check if all players have selected their clue status
+    let allSelected = true;
+    
+    for (const player of nonGuesserPlayers) {
+      const storageKey = `clue_status_${game.current_round.roundNumber}_${player.id}`;
+      const status = localStorage.getItem(storageKey);
+      
+      if (!status || (status !== 'unique' && status !== 'duplicate')) {
+        allSelected = false;
+        break;
+      }
+    }
+    
+    setAllCluesStatusSelected(allSelected);
   }, [game.status, game.current_round, game.players]);
   
   const renderGameContent = () => {
@@ -123,10 +138,15 @@ const IRLGameRoom = ({
       // When a round ends, we prepare for the next round by clearing status
       const roundNumber = game.current_round?.roundNumber;
       if (roundNumber) {
+        // Clear individual player status entries
+        game.players.forEach(player => {
+          localStorage.removeItem(`clue_status_${roundNumber}_${player.id}`);
+        });
+        // Also clear the old format for backward compatibility
         localStorage.removeItem(`clue_status_${roundNumber}`);
       }
     }
-  }, [game.status, game.current_round]);
+  }, [game.status, game.current_round, game.players]);
   
   return (
     <div className="container mx-auto px-4 py-6">

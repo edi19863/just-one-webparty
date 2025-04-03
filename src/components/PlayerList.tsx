@@ -31,9 +31,16 @@ const PlayerList = ({ players, currentPlayerId, game }: PlayerListProps) => {
     
     if (hasSubmittedClue) {
       // In reviewing or guessing phase, check if they've marked their clue status
-      const clueStatus = localStorage.getItem(`clue_status_${game.current_round.roundNumber}`);
+      // Use player-specific storage key
+      const clueStatusKey = `clue_status_${game.current_round.roundNumber}_${playerId}`;
+      // For backward compatibility
+      const fallbackKey = playerId === currentPlayerId ? 
+        `clue_status_${game.current_round.roundNumber}` : null;
       
-      if ((game.status === "reviewing_clues" || game.status === "guessing") && playerId === currentPlayerId) {
+      const clueStatus = localStorage.getItem(clueStatusKey) || 
+                         (fallbackKey ? localStorage.getItem(fallbackKey) : null);
+      
+      if ((game.status === "reviewing_clues" || game.status === "guessing")) {
         if (clueStatus === "unique") {
           return {
             text: "Indizio unico",

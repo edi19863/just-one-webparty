@@ -1,4 +1,3 @@
-
 import { useRef, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,7 +19,8 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
   const [clueStatus, setClueStatus] = useState<'unique' | 'duplicate' | 'undecided'>('undecided');
   const [cluePreview, setCluePreview] = useState<string | null>(null);
   
-  // Initialize canvas when component mounts
+  const playerId = localStorage.getItem(`player_id_${round.roundNumber}`) || '';
+  
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -28,24 +28,20 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     
-    // Set canvas size to match its display size
     const rect = canvas.getBoundingClientRect();
     canvas.width = rect.width;
     canvas.height = rect.height;
     
-    // Set drawing style
     ctx.lineWidth = 3;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.strokeStyle = '#000';
     
-    // Fill background
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     setContext(ctx);
     
-    // Adjust canvas size on window resize
     const handleResize = () => {
       const currentCanvas = canvasRef.current;
       if (!currentCanvas) return;
@@ -56,13 +52,11 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
       currentCanvas.width = currentRect.width;
       currentCanvas.height = currentRect.height;
       
-      // Restore drawing style
       ctx.lineWidth = 3;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.strokeStyle = '#000';
       
-      // Restore image data
       ctx.putImageData(currentImageData, 0, 0);
     };
     
@@ -70,10 +64,13 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Load saved clue status from local storage when round changes
   useEffect(() => {
-    const storageKey = `clue_status_${round.roundNumber}`;
-    const savedStatus = localStorage.getItem(storageKey);
+    const playerId = localStorage.getItem(`player_id_${round.roundNumber}`) || '';
+    const storageKey = `clue_status_${round.roundNumber}_${playerId}`;
+    const backupKey = `clue_status_${round.roundNumber}`;
+    
+    const savedStatus = localStorage.getItem(storageKey) || localStorage.getItem(backupKey);
+    
     if (savedStatus && (savedStatus === 'unique' || savedStatus === 'duplicate')) {
       setClueStatus(savedStatus);
     } else {
@@ -81,23 +78,19 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     }
   }, [round.roundNumber]);
   
-  // Handle drawing
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!context) return;
     
     setIsDrawing(true);
     context.beginPath();
     
-    // Get coordinates
     let x: number, y: number;
     
     if ('touches' in e) {
-      // Touch event
       const rect = canvasRef.current!.getBoundingClientRect();
       x = e.touches[0].clientX - rect.left;
       y = e.touches[0].clientY - rect.top;
     } else {
-      // Mouse event
       x = e.nativeEvent.offsetX;
       y = e.nativeEvent.offsetY;
     }
@@ -108,21 +101,17 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
   const draw = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
     if (!isDrawing || !context) return;
     
-    // Prevent scrolling when drawing on mobile
     if ('touches' in e) {
       e.preventDefault();
     }
     
-    // Get coordinates
     let x: number, y: number;
     
     if ('touches' in e) {
-      // Touch event
       const rect = canvasRef.current!.getBoundingClientRect();
       x = e.touches[0].clientX - rect.left;
       y = e.touches[0].clientY - rect.top;
     } else {
-      // Mouse event
       x = e.nativeEvent.offsetX;
       y = e.nativeEvent.offsetY;
     }
@@ -130,7 +119,6 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     context.lineTo(x, y);
     context.stroke();
     
-    // Update the preview after each drawing action
     if (canvasRef.current) {
       setCluePreview(canvasRef.current.toDataURL("image/png"));
     }
@@ -141,7 +129,6 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     setIsDrawing(false);
     context.closePath();
     
-    // Save final preview
     if (canvasRef.current) {
       setCluePreview(canvasRef.current.toDataURL("image/png"));
     }
@@ -153,12 +140,10 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     context.fillStyle = '#fff';
     context.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
     
-    // Clear the preview as well
     setCluePreview(null);
   };
   
   const handleMarkClueWritten = async () => {
-    // Save the preview before submitting
     if (canvasRef.current) {
       const preview = canvasRef.current.toDataURL("image/png");
       setCluePreview(preview);
@@ -173,7 +158,6 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     }
   };
 
-  // Load saved preview on mount or when round changes
   useEffect(() => {
     const savedPreview = localStorage.getItem(`clue_preview_${round.roundNumber}`);
     if (savedPreview) {
@@ -182,9 +166,11 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
   }, [round.roundNumber]);
 
   const handleClueStatusChange = (status: 'unique' | 'duplicate') => {
-    const storageKey = `clue_status_${round.roundNumber}`;
+    const playerId = localStorage.getItem(`current_game_id`) ? 
+      localStorage.getItem(`player_id_${localStorage.getItem(`current_game_id`)}`) : '';
     
-    // Toggle the status if clicking the same button again
+    const storageKey = `clue_status_${round.roundNumber}_${playerId}`;
+    
     if (clueStatus === status) {
       setClueStatus('undecided');
       localStorage.removeItem(storageKey);
