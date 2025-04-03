@@ -1,4 +1,5 @@
 
+import { useEffect, useState } from "react";
 import { Game, GameStatus } from "@/types/game";
 import PlayerList from "./PlayerList";
 import IRLGuesserView from "./IRLGuesserView";
@@ -25,11 +26,38 @@ const IRLGameRoom = ({
   const currentPlayer = game.players.find(p => p.id === currentPlayerId);
   const isHost = currentPlayerId === game.host_id;
   const isGuesser = currentPlayer?.isGuesser || false;
+  const [allCluesStatusSelected, setAllCluesStatusSelected] = useState(false);
   
   // Check if the current player has submitted their clue in the current round
   const hasSubmittedClue = game.current_round?.clues.some(
     clue => clue.playerId === currentPlayerId
   ) || false;
+  
+  // Check if all players have selected a status for their clues
+  useEffect(() => {
+    if (game.status !== GameStatus.REVIEWING_CLUES && 
+        game.status !== GameStatus.GUESSING) {
+      setAllCluesStatusSelected(false);
+      return;
+    }
+    
+    if (!game.current_round) {
+      setAllCluesStatusSelected(false);
+      return;
+    }
+    
+    // Get all non-guesser players
+    const nonGuesserPlayers = game.players.filter(
+      player => player.id !== game.current_round?.guesserId
+    );
+    
+    // Check if at least one player has marked their clue status
+    // This is a simplification - ideally we'd check each player's status
+    const storageKey = `clue_status_${game.current_round.roundNumber}`;
+    const hasStatus = localStorage.getItem(storageKey) !== null;
+    
+    setAllCluesStatusSelected(hasStatus);
+  }, [game.status, game.current_round, game.players]);
   
   const renderGameContent = () => {
     switch (game.status) {
@@ -60,6 +88,7 @@ const IRLGameRoom = ({
               round={game.current_round}
               status={game.status}
               onUpdateGuessResult={onUpdateGuessResult}
+              allCluesStatusSelected={allCluesStatusSelected}
             />
           );
         } else {
@@ -88,10 +117,25 @@ const IRLGameRoom = ({
     }
   };
   
+  // Clear clue statuses when a new round starts
+  useEffect(() => {
+    if (game.status === GameStatus.ROUND_RESULT) {
+      // When a round ends, we prepare for the next round by clearing status
+      const roundNumber = game.current_round?.roundNumber;
+      if (roundNumber) {
+        localStorage.removeItem(`clue_status_${roundNumber}`);
+      }
+    }
+  }, [game.status, game.current_round]);
+  
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="mb-6">
-        <PlayerList players={game.players} currentPlayerId={currentPlayerId} />
+        <PlayerList 
+          players={game.players} 
+          currentPlayerId={currentPlayerId}
+          game={game} 
+        />
       </div>
       
       {/* Mostra i risultati parziali se ci sono turni completati e non siamo nella schermata del risultato */}

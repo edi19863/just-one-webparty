@@ -70,9 +70,15 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Reset clue status when round changes
+  // Load saved clue status from local storage when round changes
   useEffect(() => {
-    setClueStatus('undecided');
+    const storageKey = `clue_status_${round.roundNumber}`;
+    const savedStatus = localStorage.getItem(storageKey);
+    if (savedStatus && (savedStatus === 'unique' || savedStatus === 'duplicate')) {
+      setClueStatus(savedStatus);
+    } else {
+      setClueStatus('undecided');
+    }
   }, [round.roundNumber]);
   
   // Handle drawing
@@ -175,13 +181,26 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     }
   }, [round.roundNumber]);
 
+  const handleClueStatusChange = (status: 'unique' | 'duplicate') => {
+    const storageKey = `clue_status_${round.roundNumber}`;
+    
+    // Toggle the status if clicking the same button again
+    if (clueStatus === status) {
+      setClueStatus('undecided');
+      localStorage.removeItem(storageKey);
+    } else {
+      setClueStatus(status);
+      localStorage.setItem(storageKey, status);
+    }
+  };
+
   const renderClueStatusButtons = () => {
     return (
       <div className="flex justify-center gap-4 mt-6">
         <Button
           variant="outline"
           size="lg"
-          onClick={() => setClueStatus('unique')}
+          onClick={() => handleClueStatusChange('unique')}
           className={`${
             clueStatus === 'unique' 
               ? 'bg-green-800/20 text-green-500 border-green-500' 
@@ -195,7 +214,7 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
         <Button
           variant="outline"
           size="lg"
-          onClick={() => setClueStatus('duplicate')}
+          onClick={() => handleClueStatusChange('duplicate')}
           className={`${
             clueStatus === 'duplicate' 
               ? 'bg-red-800/20 text-red-500 border-red-500' 
@@ -278,13 +297,24 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
             
             <div className="text-center">
               <p className="mb-2">Il tuo indizio:</p>
-              {cluePreview ? (
+              {cluePreview && clueStatus !== 'duplicate' ? (
                 <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
                   <img
                     src={cluePreview}
                     alt="Tuo indizio"
                     className="w-full h-64 object-contain"
                   />
+                </div>
+              ) : cluePreview && clueStatus === 'duplicate' ? (
+                <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white opacity-50">
+                  <img
+                    src={cluePreview}
+                    alt="Tuo indizio (nascosto)"
+                    className="w-full h-64 object-contain"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <p className="bg-red-800 text-white px-4 py-2 rounded-md">INDIZIO MULTIPLO</p>
+                  </div>
                 </div>
               ) : (
                 <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
@@ -321,18 +351,24 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
             
             <div className="text-center">
               <p className="mb-2">Il tuo indizio:</p>
-              {cluePreview ? (
-                <div className={`relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white ${clueStatus === 'duplicate' ? 'opacity-50' : ''}`}>
+              {cluePreview && clueStatus !== 'duplicate' ? (
+                <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
                   <img
                     src={cluePreview}
                     alt="Tuo indizio"
                     className="w-full h-64 object-contain"
                   />
-                  {clueStatus === 'duplicate' && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                      <p className="bg-red-800 text-white px-4 py-2 rounded-md">INDIZIO MULTIPLO</p>
-                    </div>
-                  )}
+                </div>
+              ) : cluePreview && clueStatus === 'duplicate' ? (
+                <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white opacity-50">
+                  <img
+                    src={cluePreview}
+                    alt="Tuo indizio (nascosto)"
+                    className="w-full h-64 object-contain"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <p className="bg-red-800 text-white px-4 py-2 rounded-md">INDIZIO MULTIPLO</p>
+                  </div>
                 </div>
               ) : (
                 <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">

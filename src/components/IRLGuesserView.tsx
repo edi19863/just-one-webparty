@@ -9,9 +9,15 @@ interface IRLGuesserViewProps {
   round: Round;
   status: GameStatus;
   onUpdateGuessResult: (isCorrect: boolean) => void;
+  allCluesStatusSelected: boolean;
 }
 
-const IRLGuesserView = ({ round, status, onUpdateGuessResult }: IRLGuesserViewProps) => {
+const IRLGuesserView = ({ 
+  round, 
+  status, 
+  onUpdateGuessResult, 
+  allCluesStatusSelected 
+}: IRLGuesserViewProps) => {
   const [submitting, setSubmitting] = useState(false);
   const [resultSubmitted, setResultSubmitted] = useState(false);
   
@@ -31,6 +37,16 @@ const IRLGuesserView = ({ round, status, onUpdateGuessResult }: IRLGuesserViewPr
         <div className="text-center py-4">
           <p className="text-lg font-medium">
             Risultato registrato. Attendi l'inizio del prossimo turno.
+          </p>
+        </div>
+      );
+    }
+    
+    if (!allCluesStatusSelected) {
+      return (
+        <div className="text-center py-4 bg-amber-900/30 rounded-md border border-amber-700 mt-6">
+          <p className="text-lg font-medium">
+            In attesa che tutti i giocatori selezionino lo stato del loro indizio...
           </p>
         </div>
       );
