@@ -33,6 +33,14 @@ export const useGameState = (options?: UseGameStateOptions) => {
   const statusChannelRef = useRef<RealtimeChannel | null>(null);
   const lastUpdateTimeRef = useRef<number>(0);
 
+  const loadClueStatuses = useCallback(async () => {
+    if (!gameState || !gameState.current_round) return;
+    
+    const statuses = await getClueStatuses(gameState.id, gameState.current_round.roundNumber);
+    console.log('Loaded clue statuses:', statuses);
+    setClueStatuses(statuses);
+  }, [gameState]);
+
   const loadGameState = useCallback(async (gameId: string) => {
     setLoading(true);
     try {
@@ -306,14 +314,6 @@ export const useGameState = (options?: UseGameStateOptions) => {
     
     return false;
   }, [gameState, playerId, loadClueStatuses]);
-
-  const loadClueStatuses = useCallback(async () => {
-    if (!gameState || !gameState.current_round) return;
-    
-    const statuses = await getClueStatuses(gameState.id, gameState.current_round.roundNumber);
-    console.log('Loaded clue statuses:', statuses);
-    setClueStatuses(statuses);
-  }, [gameState]);
 
   useEffect(() => {
     let pollInterval: number | undefined;

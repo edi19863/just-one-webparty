@@ -287,7 +287,7 @@ export const getClueStatuses = async (gameId: string, roundNumber: number) => {
   }
 };
 
-// Add the missing clearClueStatuses function
+// Function to clear clue statuses
 export const clearClueStatuses = async (gameId: string, roundNumber: number) => {
   try {
     console.log(`Clearing clue statuses for game ${gameId}, round ${roundNumber}`);
@@ -311,4 +311,78 @@ export const clearClueStatuses = async (gameId: string, roundNumber: number) => 
     console.error('Exception clearing clue statuses:', err);
     return false;
   }
+};
+
+// Add the missing subscribeToClueStatuses function
+export const subscribeToClueStatuses = (gameId: string, callback: () => void) => {
+  const channelName = `clue-status-updates:${gameId}`;
+  
+  console.log(`Setting up subscription for clue statuses in game ${gameId} on channel ${channelName}`);
+  
+  // Clean up existing channels first
+  const existingChannels = supabase.getChannels();
+  for (const channel of existingChannels) {
+    const channelInfo = channel as any;
+    if (channelInfo?.topic && channelInfo.topic.includes(channelName)) {
+      console.log(`Removing existing channel: ${channelInfo.topic}`);
+      supabase.removeChannel(channel);
+    }
+  }
+  
+  // Create a new subscription with enhanced options
+  const channel = supabase
+    .channel(channelName, {
+      config: {
+        broadcast: {
+          self: true // Ensure client receives their own broadcasts
+        },
+        presence: {
+          key: `${gameId}-clue-statuses`,
+        }
+      }
+    })
+    .on(
+      'postgres_changes',
+      {
+        event: '*', // Listen for all events (INSERT, UPDATE, DELETE)
+        schema: 'public',
+        table: 'clue_statuses',
+        filter: `game_id=eq.${gameId}`
+      },
+      (payload) => {
+        console.log(`Received real-time clue status update for game ${gameId}:`, payload);
+        callback();
+      }
+    )
+    .subscribe((status, err) => {
+      console.log(`Supabase clue status subscription status for ${channelName}: ${status}`, err || '');
+      
+      // If subscription fails, try to reconnect
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+        console.log('Clue status subscription error or timeout, attempting to reconnect in 1 second...');
+        setTimeout(() => {
+          console.log('Reconnecting to clue status channel...');
+          try {
+            // Create a new channel instance instead of trying to reuse the existing one
+            // This avoids the "tried to subscribe multiple times" error
+            supabase.removeChannel(channel);
+            const newChannel = supabase.channel(channelName)
+              .on('postgres_changes', {
+                event: '*',
+                schema: 'public',
+                table: 'clue_statuses',
+                filter: `game_id=eq.${gameId}`
+              }, (payload) => {
+                console.log(`Received real-time clue status update for game ${gameId}:`, payload);
+                callback();
+              })
+              .subscribe();
+          } catch (e) {
+            console.error('Error during clue status channel reconnection:', e);
+          }
+        }, 1000);
+      }
+    });
+  
+  return channel;
 };
