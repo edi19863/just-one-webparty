@@ -13,6 +13,12 @@ export interface Clue {
   filtered: boolean;
 }
 
+export interface ClueStatus {
+  playerId: string;
+  playerName: string;
+  status: 'unique' | 'duplicate' | 'undecided';
+}
+
 export interface Round {
   roundNumber: number;
   secretWord: string;

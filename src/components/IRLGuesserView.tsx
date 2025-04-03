@@ -63,20 +63,6 @@ const IRLGuesserView = ({ round, status, onUpdateGuessResult }: IRLGuesserViewPr
         );
       
       case GameStatus.REVIEWING_CLUES:
-        return (
-          <div className="space-y-8">
-            <div className="text-center py-6">
-              <h3 className="text-2xl font-bold mb-3">È il tuo turno di indovinare!</h3>
-              <p className="text-lg">
-                Gli altri giocatori ti mostreranno ora i loro indizi.
-                <br />Dopo aver fatto il tuo tentativo, indica il risultato:
-              </p>
-            </div>
-            
-            {renderGuessButtons()}
-          </div>
-        );
-        
       case GameStatus.GUESSING:
         return (
           <div className="space-y-8">

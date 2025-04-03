@@ -3,7 +3,8 @@ import { useRef, useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { GameStatus, Round } from "@/types/game";
-import { CheckCircle, Eraser } from "lucide-react";
+import { CheckCircle, Eraser, Check, X } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 interface IRLClueWriterViewProps {
   round: Round;
@@ -12,11 +13,18 @@ interface IRLClueWriterViewProps {
   hasSubmitted: boolean;
 }
 
+interface ClueStatus {
+  playerId: string;
+  playerName: string;
+  status: 'unique' | 'duplicate' | 'undecided';
+}
+
 const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: IRLClueWriterViewProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [clueStatuses, setClueStatuses] = useState<ClueStatus[]>([]);
   
   // Initialize canvas when component mounts
   useEffect(() => {
@@ -67,6 +75,18 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Initialize clue statuses when round changes or status changes to reviewing clues
+  useEffect(() => {
+    if (status === GameStatus.REVIEWING_CLUES && round.clues.length > 0) {
+      const initialStatuses = round.clues.map(clue => ({
+        playerId: clue.playerId,
+        playerName: clue.playerName,
+        status: 'undecided' as const
+      }));
+      setClueStatuses(initialStatuses);
+    }
+  }, [status, round.clues]);
   
   // Handle drawing
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -138,6 +158,85 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const toggleClueStatus = (playerId: string) => {
+    setClueStatuses(prev => 
+      prev.map(clueStatus => 
+        clueStatus.playerId === playerId
+          ? { 
+              ...clueStatus, 
+              status: clueStatus.status === 'undecided' 
+                ? 'unique' 
+                : clueStatus.status === 'unique' 
+                  ? 'duplicate' 
+                  : 'undecided' 
+            }
+          : clueStatus
+      )
+    );
+  };
+
+  const getCluePreview = () => {
+    if (!canvasRef.current) return null;
+    return canvasRef.current.toDataURL("image/png");
+  };
+
+  const renderClueStatusTable = () => {
+    if (clueStatuses.length === 0) return null;
+
+    return (
+      <div className="mt-6 border rounded-md">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Giocatore</TableHead>
+              <TableHead>Stato</TableHead>
+              <TableHead>Azione</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {clueStatuses.map((clueStatus) => (
+              <TableRow 
+                key={clueStatus.playerId}
+                className={
+                  clueStatus.status === 'unique' 
+                    ? 'bg-green-900/20' 
+                    : clueStatus.status === 'duplicate' 
+                      ? 'bg-red-900/20' 
+                      : ''
+                }
+              >
+                <TableCell>{clueStatus.playerName}</TableCell>
+                <TableCell>
+                  {clueStatus.status === 'unique' && 'Unico'}
+                  {clueStatus.status === 'duplicate' && 'Multiplo'}
+                  {clueStatus.status === 'undecided' && 'Non deciso'}
+                </TableCell>
+                <TableCell>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleClueStatus(clueStatus.playerId)}
+                    className={
+                      clueStatus.status === 'unique' 
+                        ? 'text-green-500' 
+                        : clueStatus.status === 'duplicate' 
+                          ? 'text-red-500' 
+                          : ''
+                    }
+                  >
+                    {clueStatus.status === 'unique' && <Check className="h-4 w-4 mr-1" />}
+                    {clueStatus.status === 'duplicate' && <X className="h-4 w-4 mr-1" />}
+                    Cambia
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    );
   };
   
   const renderContent = () => {
@@ -224,8 +323,9 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
                   Tutti i giocatori hanno scritto i loro indizi!
                 </p>
                 <p className="mt-3">
-                  Per favore confrontate gli indizi tra voi e rimuovete eventuali parole duplicate o simili.
+                  Per favore confrontate gli indizi tra voi e indicate quali sono unici e quali sono duplicati:
                 </p>
+                {renderClueStatusTable()}
               </div>
             </div>
           </div>
