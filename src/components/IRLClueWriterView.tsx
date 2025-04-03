@@ -17,7 +17,7 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
   const [isDrawing, setIsDrawing] = useState(false);
   const [context, setContext] = useState<CanvasRenderingContext2D | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [clueStatuses, setClueStatuses] = useState<ClueStatus[]>([]);
+  const [clueStatus, setClueStatus] = useState<'unique' | 'duplicate' | 'undecided'>('undecided');
   const [cluePreview, setCluePreview] = useState<string | null>(null);
   
   // Initialize canvas when component mounts
@@ -70,17 +70,10 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Initialize clue statuses when round changes or status changes to reviewing clues
+  // Reset clue status when round changes
   useEffect(() => {
-    if (status === GameStatus.REVIEWING_CLUES && round.clues.length > 0) {
-      const initialStatuses = round.clues.map(clue => ({
-        playerId: clue.playerId,
-        playerName: clue.playerName,
-        status: 'undecided' as const
-      }));
-      setClueStatuses(initialStatuses);
-    }
-  }, [status, round.clues]);
+    setClueStatus('undecided');
+  }, [round.roundNumber]);
   
   // Handle drawing
   const startDrawing = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
@@ -161,7 +154,9 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
   const handleMarkClueWritten = async () => {
     // Save the preview before submitting
     if (canvasRef.current) {
-      setCluePreview(canvasRef.current.toDataURL("image/png"));
+      const preview = canvasRef.current.toDataURL("image/png");
+      setCluePreview(preview);
+      localStorage.setItem(`clue_preview_${round.roundNumber}`, preview);
     }
     
     setSubmitting(true);
@@ -172,55 +167,44 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
     }
   };
 
-  const toggleClueStatus = (playerId: string, newStatus: 'unique' | 'duplicate') => {
-    setClueStatuses(prev => 
-      prev.map(clueStatus => 
-        clueStatus.playerId === playerId
-          ? { ...clueStatus, status: newStatus }
-          : clueStatus
-      )
-    );
-  };
+  // Load saved preview on mount or when round changes
+  useEffect(() => {
+    const savedPreview = localStorage.getItem(`clue_preview_${round.roundNumber}`);
+    if (savedPreview) {
+      setCluePreview(savedPreview);
+    }
+  }, [round.roundNumber]);
 
   const renderClueStatusButtons = () => {
-    if (clueStatuses.length === 0) return null;
-
     return (
-      <div className="space-y-4 mt-4">
-        {clueStatuses.map((clueStatus) => (
-          <div key={clueStatus.playerId} className="flex items-center justify-between border p-3 rounded-lg bg-game-card/40">
-            <div className="font-medium">{clueStatus.playerName}</div>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => toggleClueStatus(clueStatus.playerId, 'unique')}
-                className={`${
-                  clueStatus.status === 'unique' 
-                    ? 'bg-green-800/20 text-green-500' 
-                    : 'text-gray-400'
-                } hover:bg-green-800/30 hover:text-green-500`}
-              >
-                <Check className="mr-1 h-4 w-4" />
-                Unico
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => toggleClueStatus(clueStatus.playerId, 'duplicate')}
-                className={`${
-                  clueStatus.status === 'duplicate' 
-                    ? 'bg-red-800/20 text-red-500' 
-                    : 'text-gray-400'
-                } hover:bg-red-800/30 hover:text-red-500`}
-              >
-                <X className="mr-1 h-4 w-4" />
-                Multiplo
-              </Button>
-            </div>
-          </div>
-        ))}
+      <div className="flex justify-center gap-4 mt-6">
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={() => setClueStatus('unique')}
+          className={`${
+            clueStatus === 'unique' 
+              ? 'bg-green-800/20 text-green-500 border-green-500' 
+              : 'text-gray-400'
+          } hover:bg-green-800/30 hover:text-green-500 w-full`}
+        >
+          <Check className="mr-2 h-5 w-5" />
+          Unico
+        </Button>
+        
+        <Button
+          variant="outline"
+          size="lg"
+          onClick={() => setClueStatus('duplicate')}
+          className={`${
+            clueStatus === 'duplicate' 
+              ? 'bg-red-800/20 text-red-500 border-red-500' 
+              : 'text-gray-400'
+          } hover:bg-red-800/30 hover:text-red-500 w-full`}
+        >
+          <X className="mr-2 h-5 w-5" />
+          Multiplo
+        </Button>
       </div>
     );
   };
@@ -317,8 +301,8 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
                 <p>
                   Tutti i giocatori hanno scritto i loro indizi!
                 </p>
-                <p className="mt-3">
-                  Confrontate gli indizi tra voi e indicate quali sono unici e quali sono duplicati:
+                <p className="mt-3 mb-2">
+                  Confrontate gli indizi tra voi. È il tuo indizio unico o un duplicato?
                 </p>
                 {renderClueStatusButtons()}
               </div>
@@ -338,12 +322,17 @@ const IRLClueWriterView = ({ round, status, onMarkClueWritten, hasSubmitted }: I
             <div className="text-center">
               <p className="mb-2">Il tuo indizio:</p>
               {cluePreview ? (
-                <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">
+                <div className={`relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white ${clueStatus === 'duplicate' ? 'opacity-50' : ''}`}>
                   <img
                     src={cluePreview}
                     alt="Tuo indizio"
                     className="w-full h-64 object-contain"
                   />
+                  {clueStatus === 'duplicate' && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                      <p className="bg-red-800 text-white px-4 py-2 rounded-md">INDIZIO MULTIPLO</p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="relative border-2 border-gray-500 rounded-lg overflow-hidden bg-white">

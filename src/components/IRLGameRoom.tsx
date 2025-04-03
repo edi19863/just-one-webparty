@@ -26,6 +26,11 @@ const IRLGameRoom = ({
   const isHost = currentPlayerId === game.host_id;
   const isGuesser = currentPlayer?.isGuesser || false;
   
+  // Check if the current player has submitted their clue in the current round
+  const hasSubmittedClue = game.current_round?.clues.some(
+    clue => clue.playerId === currentPlayerId
+  ) || false;
+  
   const renderGameContent = () => {
     switch (game.status) {
       case GameStatus.LOBBY:
@@ -63,7 +68,7 @@ const IRLGameRoom = ({
               round={game.current_round}
               status={game.status}
               onMarkClueWritten={onMarkClueWritten}
-              hasSubmitted={!!game.current_round.clues.find(c => c.playerId === currentPlayerId)}
+              hasSubmitted={hasSubmittedClue}
             />
           );
         }
